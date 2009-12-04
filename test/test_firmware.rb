@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'bacon'
+require 'timeout'
 
 describe 'Basic Message Firmware' do
   before do
