@@ -6,7 +6,11 @@ describe 'Basic Message Firmware' do
   before do
     filename = ENV['OPENSPRINTS_PORT']||"/dev/ttyUSB0"
     raise "Can't find the arduino" unless File.writable?(filename)
-    `stty -F #{filename} cs8 115200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts`
+
+
+
+
+    `stty -F #{filename} -parenb -parodd cs8 -hupcl -cstopb cread clocal -crtscts ignbrk -brkint ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 -opost -olcuc -ocrnl -onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0 -isig -icanon -iexten -echo -echoe -echok -echonl noflsh -xcase -tostop -echoprt -echoctl -echoke`
     @serialport = File.open(filename, "w+")
   end
 
