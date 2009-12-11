@@ -10,7 +10,7 @@ describe 'Basic Message Firmware' do
 
 
 
-    `stty -F #{filename} -parenb -parodd cs8 -hupcl -cstopb cread clocal -crtscts ignbrk -brkint ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 -opost -olcuc -ocrnl -onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0 -isig -icanon -iexten -echo -echoe -echok -echonl noflsh -xcase -tostop -echoprt -echoctl -echoke`
+    `stty -F #{filename}"406:0:18b2:8a30:3:1c:7f:8:4:2:64:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0"`
     @serialport = File.open(filename, "w+")
   end
 
