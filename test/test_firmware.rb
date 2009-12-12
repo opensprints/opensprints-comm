@@ -24,10 +24,9 @@ describe 'Basic Message Firmware' do
 
   should "respond with 'basic-2' to 'v'" do
     @serialport.putc ?v
-#    @serialport.putc ?\n
     @serialport.flush
     timeout(0.1) {
-      @serialport.readline.should==("basic-2\r\n")
+      @serialport.readline.should==("v:basic-2\r\n")
     }
   end
   should "respond with 'OK 0' to 'l\\000\\000\\r\\n'" do
@@ -37,7 +36,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("OK 0\r\n")
+      @serialport.readline.should==("l:OK 0\r\n")
     }
   end
   should "accept distance that include other commands" do
@@ -47,7 +46,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("OK 118\r\n")
+      @serialport.readline.should==("l:OK 118\r\n")
     }
   end
   should "accept the max possible distance" do
@@ -57,7 +56,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("OK 65535\r\n")
+      @serialport.readline.should==("l:OK 65535\r\n")
     }
   end
 end
