@@ -22,11 +22,35 @@ describe 'Basic Message Firmware' do
     @serialport.close
   end
 
-  it "should respond to 'v' with its version" do
-    @serialport.putc ?v
+  should "respond with 'OK 0' to 'l\\000\\000\\r\\n'" do
+    @serialport.putc ?l
+    @serialport.putc ?\000
+    @serialport.putc ?\000
+    @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("basic-1\r\n")
+      @serialport.readline.should==("OK 0\r\n")
+    }
+  end
+  should "accept distance that include other commands" do
+    @serialport.putc ?l
+    @serialport.putc ?v
+    @serialport.putc ?\000
+    @serialport.putc ?\r
+    @serialport.putc ?\n
+    timeout(0.1) {
+      @serialport.readline.should==("OK 118\r\n")
+    }
+  end
+  should "accept the max possible distance" do
+    @serialport.putc ?l
+    @serialport.putc 255
+    @serialport.putc 255
+    @serialport.putc ?\r
+    @serialport.putc ?\n
+    timeout(0.1) {
+      @serialport.readline.should==("OK 65535\r\n")
     }
   end
 end
+
