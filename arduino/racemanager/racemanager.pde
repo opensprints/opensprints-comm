@@ -1,229 +1,297 @@
 /*
  * Arduino wiring:
  * 
- * Digital pin  Connected to
- * -----------  ------------
- * 2            Sensor 0
- * 3            Sensor 1
- * 4            Sensor 2
- * 5            Sensor 3
+ * Arduino pin  ATmega168/328 Pin  Connected to
+ * -----------  -----------------  ------------
+ * digital 2    PD2                Sensor 0
+ * digital 3    PD3                Sensor 1
+ * digital 4    PD4                Sensor 2
+ * digital 5    PD5                Sensor 3
  * 
- * 9            Racer0 Start LED anode, Stop LED cathode
- * 10           Racer1 Start LED anode, Stop LED cathode
- * 11           Racer2 Start LED anode, Stop LED cathode
- * 12           Racer3 Start LED anode, Stop LED cathode
+ * digital 9    PB1                Racer0 Start LED anode, Stop LED cathode
+ * digital 10   PB2                Racer1 Start LED anode, Stop LED cathode
+ * digital 11   PB3                Racer2 Start LED anode, Stop LED cathode
+ * digital 12   PB4                Racer3 Start LED anode, Stop LED cathode
  * 
  */
+
+#include <avr/interrupt.h>  
+#include <avr/io.h>
+
+#define NUM_SENSORS 4
+#define MAX_LINE 20
+char commandMsg[MAX_LINE + 1];
+int commandMsgLen = 0;
 
 int statusLEDPin = 13;
 long statusBlinkInterval = 250;
 int lastStatusLEDValue = LOW;
 long previousStatusBlinkMillis = 0;
 
-boolean raceStarted = false;
-boolean raceStarting = false;
+
 boolean mockMode = false;
 unsigned long raceStartMillis;
-unsigned long currentTimeMillis;
+unsigned long raceMillis;
 
-int val = 0;
+int racerGoLedPins[NUM_SENSORS] = {9,10,11,12}; // Arduino digital IOs
+int sensorPinsArduino[NUM_SENSORS] = {2,3,4,5}; // Arduino digital IOs
+int sensorPortDPinsAvr[NUM_SENSORS] = {2,3,4,5};    // Arduino digital IOs
+int previousSensorValues;
+int currentSensorValues;
+unsigned long racerTicks[NUM_SENSORS] = {0,0,0,0};
+unsigned long racerFinishTimeMillis[NUM_SENSORS] = {0,0,0,0};
 
-int racer0GoLedPin = 9;
-int racer1GoLedPin = 10;
-int racer2GoLedPin = 11;
-int racer3GoLedPin = 12;
-
-int sensorPins[4] = {2,3,4,5};
-int previoussensorValues[4] = {HIGH,HIGH,HIGH,HIGH};
-int values[4] = {0,0,0,0};
-unsigned long racerTicks[4] = {0,0,0,0};
-unsigned long racerFinishTimeMillis[4];
+unsigned int racerFinishedFlags = 0;
+#define ALL_RACERS_FINISHED_MASK  0x0F // binary 00001111
 
 unsigned long lastCountDownMillis;
 int lastCountDown;
 
-unsigned int charBuff[8];
-unsigned int charBuffLen = 0;
-boolean isReceivingRaceLength = false;
+int raceLengthTicks = 1000;
 
-unsigned int raceLengthTicks = 20;
-int previousFakeTickMillis = 0;
-
-int updateInterval = 250;
+int updateInterval = 250;   // milliseconds
 unsigned long lastUpdateMillis = 0;
 
-void setup() {
+int state;
+enum
+{
+  STATE_IDLE,
+  STATE_COUNTDOWN,
+  STATE_RACING,
+};
+
+ISR(PCINT2_vect)
+{
+  unsigned int newRisingEdges;
+
+  if(state == STATE_RACING)
+  {
+    if(!mockMode)
+    {
+      raceMillis = millis() - raceStartMillis;
+      // Register rising edge events
+      previousSensorValues = currentSensorValues;
+      currentSensorValues = PIND;
+      newRisingEdges = (previousSensorValues ^ currentSensorValues) & currentSensorValues;
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
+        {
+          racerTicks[i]++;
+        }
+        if(racerTicks[i] == raceLengthTicks)
+        {
+          racerFinishTimeMillis[i] = raceMillis;
+        }
+      }
+    }
+  }
+}
+
+void setup()
+{
   Serial.begin(115200); 
   pinMode(statusLEDPin, OUTPUT);
-  pinMode(racer0GoLedPin, OUTPUT);
-  pinMode(racer1GoLedPin, OUTPUT);
-  pinMode(racer2GoLedPin, OUTPUT);
-  pinMode(racer3GoLedPin, OUTPUT);
-  digitalWrite(racer0GoLedPin, LOW);
-  digitalWrite(racer1GoLedPin, LOW);
-  digitalWrite(racer2GoLedPin, LOW);
-  digitalWrite(racer3GoLedPin, LOW);
-  for(int i=0; i<=3; i++)
+  for(int i=0; i < NUM_SENSORS; i++)
   {
-    pinMode(sensorPins[i], INPUT);
-    digitalWrite(sensorPins[i], HIGH);
+    pinMode(racerGoLedPins[i], OUTPUT);
+    digitalWrite(racerGoLedPins[i], LOW);
+    pinMode(sensorPinsArduino[i], INPUT);
+    digitalWrite(sensorPinsArduino[i], HIGH);   // set weak pull-up
   }
+  // make digital IO pins 2,3,4,5 pin change interrupts
+  PCICR |= (1 << PCIE2);
+  PCMSK2 |= (1 << PCINT18);
+  PCMSK2 |= (1 << PCINT19);
+  PCMSK2 |= (1 << PCINT20);
+  PCMSK2 |= (1 << PCINT21);
 
+  state = STATE_IDLE;
 }
 
-void blinkLED() {
-  if (millis() - previousStatusBlinkMillis > statusBlinkInterval) {
+void blinkLED()
+{
+  if (millis() - previousStatusBlinkMillis > statusBlinkInterval)
+  {
     previousStatusBlinkMillis = millis();
-
     lastStatusLEDValue = !lastStatusLEDValue;
-
     digitalWrite(statusLEDPin, lastStatusLEDValue);
   }
-
 }
 
-void raceStart() {
-  raceStartMillis = millis();
-}
-
-
-void checkSerial(){
-  if(Serial.available()) {
-    val = Serial.read();
-    if(isReceivingRaceLength) {
-      if(val != '\r') {
-        charBuff[charBuffLen] = val;
-        charBuffLen++;
+boolean commandMsgAvailable(int max_line,char *line,int *lineLen)
+{
+  int c;
+  static int line_idx = 0;
+  static boolean eol = false;
+  if (max_line <= 0)    // handle bad values for max_line
+  {
+    eol = true;
+    if (max_line == 0)
+      line[0] = '\0';
+  }
+  else        // valid max_line
+  {
+    if (Serial.available() > 0)
+    {
+      c = Serial.read();
+      if (c != -1)  // got a char -- should always be true
+      {
+        if (c == '\r' || c == '\n')
+          eol = true;
+        else
+          line[line_idx++] = c;
+        if (line_idx >= max_line)
+          eol = true;
+        line[line_idx] = '\0';     // always terminate line, even if unfinished
       }
-      else if(charBuffLen==2) {
+      if (eol)
+      {
+        *lineLen = line_idx;
+        line_idx = 0;      // reset for next line
+        eol = false;       // get ready for another line
+        return true;
+      }
+      else
+        return false;
+    }
+  }
+}   
+
+void checkSerial()
+{
+  if (commandMsgAvailable(MAX_LINE,commandMsg,&commandMsgLen))
+  {
+//    Serial.write(commandMsg);  // echo back the line we just read
+//    Serial.write("\r\n");
+
+    if(commandMsg[0] == 'a')    // ACK heartbeat
+    {
+      if(commandMsgLen==3)
+      {
+        // received 2-byte symbol. need to return it.
+        Serial.print("a:");
+        Serial.print(commandMsg[1],BYTE);
+        Serial.println(commandMsg[2],BYTE);
+      }
+      else
+      {
+        Serial.println("NACK");
+      }
+    }
+    else if(commandMsg[0] == 'l')
+    {
+      if(commandMsgLen==3)
+      {
         // received all the parts of the distance. time to process the value we received.
         // The maximum for 2 chars would be 65 535 ticks.
         // For a 0.25m circumference roller, that would be 16384 meters = 10.1805456 miles.
-        raceLengthTicks = charBuff[1] * 256 + charBuff[0];
-        isReceivingRaceLength = false;
-        Serial.print("l:OK ");
+        raceLengthTicks = commandMsg[2] * 256 + commandMsg[1];
+        Serial.print("l:");
         Serial.println(raceLengthTicks,DEC);
       }
-      else {
-        Serial.println("l:ERROR receiving tick lengths");
+      else
+      {
+        Serial.println("ERROR receiving race length ticks");
       }
     }
-    else {
-      if(val == 'l') {
-          charBuffLen = 0;
-          isReceivingRaceLength = true;
-      }
-      if(val == 'v') {
-        Serial.println("v:basic-2");
-      }
-      if(val == 'g') {
-        for(int i=0; i<=3; i++)
-        {
-          racerTicks[i] = 0;
-          racerFinishTimeMillis[i] = 256*0;          
-        }
-
-        raceStarting = true;
-        raceStarted = false;
-        lastCountDown = 4;
-        lastCountDownMillis = millis();
-      }
-          
-      else if(val == 'm') {
-        // toggle mock mode
-        mockMode = !mockMode;
-      }
-
-      if(val == 's') {
-        raceStarted = false;
-
-        digitalWrite(racer0GoLedPin,LOW);
-        digitalWrite(racer1GoLedPin,LOW);
-        digitalWrite(racer2GoLedPin,LOW);
-        digitalWrite(racer3GoLedPin,LOW);
-      }
-    }
-  }
-}
-
-void printStatusUpdate() {
-  if(currentTimeMillis - lastUpdateMillis > updateInterval) {
-    lastUpdateMillis = currentTimeMillis;
-    for(int i=0; i<=3; i++)
+    else if(commandMsg[0] == 'v')   // version
     {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(racerTicks[i], DEC);
+      Serial.print("basic-2");
     }
-    Serial.print("t: ");
-    Serial.println(currentTimeMillis, DEC);
-  }
-}
-
-void loop() {
-  blinkLED();
-  
-  checkSerial();
-
-
-  if (raceStarting) {
-    if((millis() - lastCountDownMillis) > 1000){
-      lastCountDown -= 1;
+    else if(commandMsg[0] == 'g')
+    {
+      state = STATE_COUNTDOWN;
+      lastCountDown = 4;
       lastCountDownMillis = millis();
     }
-    if(lastCountDown == 0) {
-      raceStart();
-      raceStarting = false;
-      raceStarted = true;
-
-      digitalWrite(racer0GoLedPin,HIGH);
-      digitalWrite(racer1GoLedPin,HIGH);
-      digitalWrite(racer2GoLedPin,HIGH);
-      digitalWrite(racer3GoLedPin,HIGH);
-    }
-  }
-  if (raceStarted) {
-    currentTimeMillis = millis() - raceStartMillis;
-
-    for(int i=0; i<=3; i++)
+    else if(commandMsg[0] == 'm')
     {
-      if(!mockMode) {
-        values[i] = digitalRead(sensorPins[i]);
-        if(values[i] == HIGH && previoussensorValues[i] == LOW){
-          racerTicks[i]++;
-          if(racerFinishTimeMillis[i] == 0 && racerTicks[i] >= raceLengthTicks) {
-            racerFinishTimeMillis[i] = currentTimeMillis;          
-            Serial.print(i);
-            Serial.print("f: ");
-            Serial.println(racerFinishTimeMillis[i], DEC);
-            digitalWrite(racer0GoLedPin+i,LOW);
-          }
-        }
-        previoussensorValues[i] = values[i];
+      // toggle mock mode
+      mockMode = !mockMode;
+    }
+    else if(commandMsg[0] == 's')
+    {
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        digitalWrite(racerGoLedPins[i],LOW);
       }
-      else {
-        if(currentTimeMillis - lastUpdateMillis > updateInterval) {
-          racerTicks[i]+=(i+1);
-          if(racerFinishTimeMillis[i] == 0 && racerTicks[i] >= raceLengthTicks) {
-            racerFinishTimeMillis[i] = currentTimeMillis;          
-            Serial.print(i);
-            Serial.print("f: ");
-            Serial.println(racerFinishTimeMillis[i], DEC);
-            digitalWrite(racer0GoLedPin+i,LOW);
-          }
-        }
-      }
+      state = STATE_IDLE;
     }
   }
-  
+}
 
-  if(racerFinishTimeMillis[0] != 0 && racerFinishTimeMillis[1] != 0 && racerFinishTimeMillis[2] != 0 && racerFinishTimeMillis[3] != 0){
-    if(raceStarted) {
-      raceStarted = false;
-      printStatusUpdate();
+void handleStates()
+{
+  long systemTime = millis();
+  if(state == STATE_COUNTDOWN)
+  {
+    if((systemTime - lastCountDownMillis) > 1000)
+    {
+      lastCountDown -= 1;
+      lastCountDownMillis = systemTime;
     }
-  } else {
-    printStatusUpdate();
+    if(lastCountDown == 0)
+    {
+      raceStartMillis = systemTime;
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        racerFinishedFlags=0;
+        racerTicks[i] = 0;
+        racerFinishTimeMillis[i] = 0;
+        digitalWrite(racerGoLedPins[i],HIGH);
+      }
+      state = STATE_RACING;
+    }
   }
+  if (state == STATE_RACING)
+  {
+    raceMillis = systemTime - raceStartMillis;
+    if(raceMillis - lastUpdateMillis > updateInterval)
+    // Print status update
+    {
+      lastUpdateMillis = raceMillis;
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+
+        if(mockMode)
+        {
+          racerTicks[i]+=(i+1); // manufacture ticks.
+        }
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(racerTicks[i], DEC);
+      }
+      Serial.print("t: ");
+      Serial.println(raceMillis, DEC);
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+
+        if(!(racerFinishedFlags & (1<<i)))
+        // Finished racer hasn't been announced yet.
+        {
+          if(racerFinishTimeMillis[i] != 0)
+          {
+            Serial.print(i);
+            Serial.print("f: ");
+            Serial.println(racerFinishTimeMillis[i], DEC);
+            digitalWrite(racerGoLedPins[i],LOW);
+            racerFinishedFlags |= (1<<i);
+          }
+        }
+      }
+    }
+    if(racerFinishedFlags == ALL_RACERS_FINISHED_MASK)
+    {
+      state = STATE_IDLE;
+    }
+  }
+}
+
+void loop()
+{
+  blinkLED();
+  checkSerial();
+  handleStates();
 }
 
