@@ -29,6 +29,15 @@ describe 'Basic Message Firmware' do
       @serialport.readline.should==("v:basic-2\r\n")
     }
   end
+  should "respond with 'l:ERROR receiving tick lengths' to 'l\\000\\r\\n'" do
+    @serialport.putc ?l
+    @serialport.putc ?\000
+    @serialport.putc ?\r
+    @serialport.putc ?\n
+    timeout(0.1) {
+      @serialport.readline.should==("l:ERROR receiving tick lengths\r\n")
+    }
+  end
   should "respond with 'OK 0' to 'l\\000\\000\\r\\n'" do
     @serialport.putc ?l
     @serialport.putc ?\000
