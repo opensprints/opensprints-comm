@@ -22,6 +22,14 @@ describe 'Basic Message Firmware' do
     @serialport.close
   end
 
+  should "respond with 'basic-2' to 'v'" do
+    @serialport.putc ?v
+#    @serialport.putc ?\n
+    @serialport.flush
+    timeout(0.1) {
+      @serialport.readline.should==("basic-2\r\n")
+    }
+  end
   should "respond with 'OK 0' to 'l\\000\\000\\r\\n'" do
     @serialport.putc ?l
     @serialport.putc ?\000

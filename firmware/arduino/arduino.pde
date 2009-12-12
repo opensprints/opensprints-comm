@@ -46,7 +46,7 @@ unsigned int charBuff[8];
 unsigned int charBuffLen = 0;
 boolean isReceivingRaceLength = false;
 
-int raceLengthTicks = 20;
+unsigned int raceLengthTicks = 20;
 int previousFakeTickMillis = 0;
 
 int updateInterval = 250;
@@ -101,11 +101,11 @@ void checkSerial(){
         // For a 0.25m circumference roller, that would be 16384 meters = 10.1805456 miles.
         raceLengthTicks = charBuff[1] * 256 + charBuff[0];
         isReceivingRaceLength = false;
-        Serial.print("OK ");
+        Serial.print("l:OK ");
         Serial.println(raceLengthTicks,DEC);
       }
       else {
-        Serial.println("ERROR receiving tick lengths");
+        Serial.println("l:ERROR receiving tick lengths");
       }
     }
     else {
@@ -114,7 +114,7 @@ void checkSerial(){
           isReceivingRaceLength = true;
       }
       if(val == 'v') {
-        Serial.println("basic-1");
+        Serial.println("v:basic-2");
       }
       if(val == 'g') {
         for(int i=0; i<=3; i++)
