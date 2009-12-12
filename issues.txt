@@ -1,0 +1,7 @@
+if we send version 1 a v message, we get no newline. Therefore on any system that does not respond to a newline, we should set the distance once and throw away the result before because the response to the first one may be "basic-1OK 0\r\n"
+
+
+if we send version 1 a distance > 32767 ticks, the arduino will record it as -1
+therefore to handle this the desktop app needs to raise an error if the user has basic-1 and a tries a distance greater than 32767
+
+basic-2 onward, only raise error if the user sets a distance greater than 255 * 256 + 255
