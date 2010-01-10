@@ -114,7 +114,7 @@ void checkSerial(){
           isReceivingRaceLength = true;
       }
       if(val == 'v') {
-        Serial.println("basic-1");
+        Serial.println("v:basic-2");
       }
       if(val == 'g') {
         for(int i=0; i<=3; i++)
