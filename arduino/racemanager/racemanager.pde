@@ -19,15 +19,20 @@
 #include <avr/io.h>
 
 #define NUM_SENSORS 4
-#define MAX_LINE 20
-char commandMsg[MAX_LINE + 1];
-int commandMsgLen = 0;
+#define MAX_LINELENGTH 20
+#define MAX_MSGCHARS 32
 
 int statusLEDPin = 13;
 long statusBlinkInterval = 250;
 int lastStatusLEDValue = LOW;
 long previousStatusBlinkMillis = 0;
 
+struct COMMAND_MSG_T
+{
+  char type;
+  char value[MAX_MSGCHARS];
+};
+COMMAND_MSG_T commandMsg;
 
 boolean mockMode = false;
 unsigned long raceStartMillis;
@@ -119,8 +124,12 @@ void blinkLED()
   }
 }
 
-boolean commandMsgAvailable(int max_line,char *line,int *lineLen)
+boolean newCommandMsgEvaluated()
 {
+  int max_line;
+  int commandValueLen;
+  char line[32];
+  int lineLen;
   int c;
   static int line_idx = 0;
   static boolean eol = false;
@@ -147,7 +156,7 @@ boolean commandMsgAvailable(int max_line,char *line,int *lineLen)
       }
       if (eol)
       {
-        *lineLen = line_idx;
+        lineLen = line_idx;
         line_idx = 0;      // reset for next line
         eol = false;       // get ready for another line
         return true;
@@ -156,61 +165,70 @@ boolean commandMsgAvailable(int max_line,char *line,int *lineLen)
         return false;
     }
   }
+  // Extract value for each message type.
+  if(commandMsg.type == 'a')    // ACK heartbeat
+  {
+    if(commandValueLen==3)
+    {
+      // received 2-byte symbol. need to return it.
+
+
+      sprintf(commandMsg.value,"NACK");
+    }
+  }
+  else if(commandMsg.type == 'l')
+  {
+    if(isAlphaNumeric(commandMsg.value) && numChars(commandMsg.value)) 
+    {
+      raceLengthTicks = string2int(commandMsg.value);
+    }
+    else
+    {
+      sprintf(commandMsg.value,"ERROR receiving race length ticks");
+    }
+
 }   
 
 void checkSerial()
 {
-  if (commandMsgAvailable(MAX_LINE,commandMsg,&commandMsgLen))
+  if (newCommandMsgEvaluated())
   {
-//    Serial.write(commandMsg);  // echo back the line we just read
-//    Serial.write("\r\n");
-
-    if(commandMsg[0] == 'a')    // ACK heartbeat
+    // react to received commands.
+    if(commandMsg.type == 'a')    // ACK heartbeat
     {
-      if(commandMsgLen==3)
-      {
-        // received 2-byte symbol. need to return it.
-        Serial.print("a:");
-        Serial.print(commandMsg[1],BYTE);
-        Serial.println(commandMsg[2],BYTE);
-      }
-      else
-      {
-        Serial.println("NACK");
-      }
+      Serial.print("a:");
+      Serial.print(commandMsg.value);
     }
-    else if(commandMsg[0] == 'l')
+    else if(commandMsg.type == 'l')
     {
-      if(commandMsgLen==3)
-      {
         // received all the parts of the distance. time to process the value we received.
         // The maximum for 2 chars would be 65 535 ticks.
         // For a 0.25m circumference roller, that would be 16384 meters = 10.1805456 miles.
-        raceLengthTicks = commandMsg[2] * 256 + commandMsg[1];
+        raceLengthTicks = commandMsg.value;
         Serial.print("l:");
-        Serial.println(raceLengthTicks,DEC);
+        Serial.println(commandMsg.value);
       }
       else
       {
         Serial.println("ERROR receiving race length ticks");
       }
     }
-    else if(commandMsg[0] == 'v')   // version
+    else if(commandMsg.type == 'v')   // version
     {
-      Serial.println("v:basic-2");
+      Serial.println("basic-2");
     }
-    else if(commandMsg[0] == 'g')
+    else if(commandMsg.type == 'g')
     {
       state = STATE_COUNTDOWN;
       lastCountDown = 4;
       lastCountDownMillis = millis();
     }
-    else if(commandMsg[0] == 'm')
+    else if(commandMsg.type == 'm')
     {
       // toggle mock mode
       mockMode = !mockMode;
     }
-    else if(commandMsg[0] == 's')
+    else if(commandMsg.type == 's')
     {
       for(int i=0; i < NUM_SENSORS; i++)
       {
