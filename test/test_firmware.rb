@@ -29,15 +29,16 @@ describe 'Basic Message Firmware' do
       @serialport.readline.should==("v:basic-2\r\n")
     }
   end
-  should "respond with 'l:ERROR receiving tick lengths' to 'l\\000\\r\\n'" do
-    @serialport.putc ?l
-    @serialport.putc ?\000
-    @serialport.putc ?\r
-    @serialport.putc ?\n
-    timeout(0.1) {
-      @serialport.readline.should==("l:ERROR receiving tick lengths\r\n")
-    }
-  end
+#  should "respond with 'l:ERROR receiving tick lengths' to 'l\\000\\r\\n'" do
+#    @serialport.putc ?l
+#    @serialport.putc ?\000
+#    @serialport.putc ?\r
+#    @serialport.putc ?\n
+#    timeout(0.1) {
+#      @serialport.readline.should==("l:ERROR receiving tick lengths\r\n")
+#    }
+#  end
+
   should "respond with 'OK 0' to 'l\\000\\000\\r\\n'" do
     @serialport.putc ?l
     @serialport.putc ?\000
@@ -45,7 +46,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("l:OK 0\r\n")
+      @serialport.readline.should==("l:0\r\n")
     }
   end
   should "accept distance that include other commands" do
@@ -55,7 +56,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("l:OK 118\r\n")
+      @serialport.readline.should==("l:118\r\n")
     }
   end
   should "accept the max possible distance" do
@@ -65,7 +66,7 @@ describe 'Basic Message Firmware' do
     @serialport.putc ?\r
     @serialport.putc ?\n
     timeout(0.1) {
-      @serialport.readline.should==("l:OK 65535\r\n")
+      @serialport.readline.should==("l:65535\r\n")
     }
   end
 end
