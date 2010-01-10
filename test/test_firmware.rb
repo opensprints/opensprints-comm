@@ -24,6 +24,8 @@ describe 'Basic Message Firmware' do
 
   should "respond with 'basic-2' to 'v'" do
     @serialport.putc ?v
+    @serialport.putc ?\r
+    @serialport.putc ?\n
     @serialport.flush
     timeout(0.1) {
       @serialport.readline.should==("v:basic-2\r\n")

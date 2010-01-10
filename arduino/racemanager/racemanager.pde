@@ -197,7 +197,7 @@ void checkSerial()
     }
     else if(commandMsg[0] == 'v')   // version
     {
-      Serial.print("basic-2");
+      Serial.println("v:basic-2");
     }
     else if(commandMsg[0] == 'g')
     {
