@@ -101,11 +101,11 @@ void checkSerial(){
         // For a 0.25m circumference roller, that would be 16384 meters = 10.1805456 miles.
         raceLengthTicks = charBuff[1] * 256 + charBuff[0];
         isReceivingRaceLength = false;
-        Serial.print("OK ");
+        Serial.print("l:");
         Serial.println(raceLengthTicks,DEC);
       }
       else {
-        Serial.println("ERROR receiving tick lengths");
+        Serial.println("l:ERROR receiving tick lengths");
       }
     }
     else {
