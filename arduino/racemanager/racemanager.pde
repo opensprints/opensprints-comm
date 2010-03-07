@@ -27,12 +27,12 @@ long statusBlinkInterval = 250;
 int lastStatusLEDValue = LOW;
 long previousStatusBlinkMillis = 0;
 
-struct COMMAND_MSG_T
+struct COMMAND_MSG
 {
   char type;
   char value[MAX_MSGCHARS];
 };
-COMMAND_MSG_T commandMsg;
+COMMAND_MSG receivedMsg;
 
 boolean mockMode = false;
 unsigned long raceStartMillis;
@@ -131,9 +131,24 @@ boolean newCommandMsgEvaluated()
   char line[32];
   int lineLen;
   int c;
-  static int line_idx = 0;
+  static int charIdx = 0;
   static boolean eol = false;
-  if (max_line <= 0)    // handle bad values for max_line
+  if (max_line <=f(receivedMsg.type == 'a')    // ACK heartbeat
+			170   {
+			171     if(commandValueLen==3)
+			172     {
+			173       // received 2-byte symbol. need to return it.
+			174 
+			175 
+			176       sprintf(receivedMsg.value,"NACK");
+			177     }
+			178   }
+			179   else if(receivedMsg.type == 'l')
+			180   {
+			181     if(isAlphaNumeric(receivedMsg.value) && numChars(receivedMsg.value))
+			182     {
+			183       raceLengthTicks = string2int(receivedMsg.value) 
+			0)    // handle bad values for max_line
   {
     eol = true;
     if (max_line == 0)
@@ -149,15 +164,15 @@ boolean newCommandMsgEvaluated()
         if (c == '\r' || c == '\n')
           eol = true;
         else
-          line[line_idx++] = c;
-        if (line_idx >= max_line)
+          line[charIdx++] = c;
+        if (charIdx >= max_line)
           eol = true;
-        line[line_idx] = '\0';     // always terminate line, even if unfinished
+        line[charIdx] = '\0';     // always terminate line, even if unfinished
       }
       if (eol)
       {
-        lineLen = line_idx;
-        line_idx = 0;      // reset for next line
+        lineLen = charIdx;
+        charIdx = 0;      // reset for next line
         eol = false;       // get ready for another line
         return true;
       }
@@ -165,26 +180,26 @@ boolean newCommandMsgEvaluated()
         return false;
     }
   }
-  // Extract value for each message type.
-  if(commandMsg.type == 'a')    // ACK heartbeat
+  // march through full line received and fill receivedMsg with data.
+  if(receivedMsg.type == 'a')    // ACK heartbeat
   {
     if(commandValueLen==3)
     {
       // received 2-byte symbol. need to return it.
 
 
-      sprintf(commandMsg.value,"NACK");
+      sprintf(receivedMsg.value,"NACK");
     }
   }
-  else if(commandMsg.type == 'l')
+  else if(receivedMsg.type == 'l')
   {
-    if(isAlphaNumeric(commandMsg.value) && numChars(commandMsg.value)) 
+    if(isAlphaNumeric(receivedMsg.value) && numChars(receivedMsg.value)) 
     {
-      raceLengthTicks = string2int(commandMsg.value);
+      raceLengthTicks = string2int(receivedMsg.value);
     }
     else
     {
-      sprintf(commandMsg.value,"ERROR receiving race length ticks");
+      sprintf(receivedMsg.value,"ERROR receiving race length ticks");
     }
 
 }   
@@ -194,41 +209,41 @@ void checkSerial()
   if (newCommandMsgEvaluated())
   {
     // react to received commands.
-    if(commandMsg.type == 'a')    // ACK heartbeat
+    if(receivedMsg.type == 'a')    // ACK heartbeat
     {
       Serial.print("a:");
-      Serial.print(commandMsg.value);
+      Serial.print(receivedMsg.value);
     }
-    else if(commandMsg.type == 'l')
+    else if(receivedMsg.type == 'l')
     {
         // received all the parts of the distance. time to process the value we received.
         // The maximum for 2 chars would be 65 535 ticks.
         // For a 0.25m circumference roller, that would be 16384 meters = 10.1805456 miles.
-        raceLengthTicks = commandMsg.value;
+        raceLengthTicks = receivedMsg.value;
         Serial.print("l:");
-        Serial.println(commandMsg.value);
+        Serial.println(receivedMsg.value);
       }
       else
       {
         Serial.println("ERROR receiving race length ticks");
       }
     }
-    else if(commandMsg.type == 'v')   // version
+    else if(receivedMsg.type == 'v')   // version
     {
       Serial.println("basic-2");
     }
-    else if(commandMsg.type == 'g')
+    else if(receivedMsg.type == 'g')
     {
       state = STATE_COUNTDOWN;
       lastCountDown = 4;
       lastCountDownMillis = millis();
     }
-    else if(commandMsg.type == 'm')
+    else if(receivedMsg.type == 'm')
     {
       // toggle mock mode
       mockMode = !mockMode;
     }
-    else if(commandMsg.type == 's')
+    else if(receivedMsg.type == 's')
     {
       for(int i=0; i < NUM_SENSORS; i++)
       {
