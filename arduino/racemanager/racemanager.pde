@@ -119,7 +119,7 @@ boolean newMsgAvailable()
 
 void doStateIdle()
 {
-  if(newMsgAvailable)
+  if(newMsgAvailable())
   {
   }
   else
@@ -129,7 +129,7 @@ void doStateIdle()
 
 void doStateCountdown()
 {
-  if(newMsgAvailable)
+  if(newMsgAvailable())
   {
   }
   else
@@ -139,7 +139,7 @@ void doStateCountdown()
 
 void doStateRacing()
 {
-  if(newMsgAvailable)
+  if(newMsgAvailable())
   {
   }
   else
@@ -168,4 +168,3 @@ void loop()
       break;
   }
 }
-
