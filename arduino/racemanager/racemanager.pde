@@ -1,6 +1,9 @@
 #define MAX_LINE 20
 char line[MAX_LINE + 1];
 
+#define CHAR_MSG_INITIAL '!'
+#define CHAR_MSG_SEPARATOR ':'
+
 enum TX_MSG
 {
   TX_MSG_F,
@@ -24,6 +27,7 @@ enum TX_MSG
   TX_MSG_3F,
   TX_MSG_T,
   TX_MSG_NACK,
+  NUM_TX_MSGS,
 };
 
 enum RX_MSG
@@ -37,6 +41,45 @@ enum RX_MSG
   RX_MSG_S,
   RX_MSG_P,
   RX_MSG_V,
+  NUM_RX_MSGS,
+};
+
+char * txMsgList[NUM_TX_MSGS]=
+{
+  "F",
+  "A",
+  "C",
+  "CD",
+  "G",
+  "I",
+  "L",
+  "M",
+  "S",
+  "P",
+  "V",
+  "0",
+  "1",
+  "2",
+  "3",
+  "0f",
+  "1f",
+  "2f",
+  "3f",
+  "t",
+  "NACK",
+};
+
+char * rxMsgList[NUM_RX_MSGS]=
+{
+  "a",
+  "c",
+  "g",
+  "i",
+  "l",
+  "m",
+  "s",
+  "p",
+  "v",
 };
 
 struct COMMAND_MSG
