@@ -4,7 +4,34 @@ char line[MAX_LINE + 1];
 #define CHAR_MSG_INITIAL '!'
 #define CHAR_MSG_SEPARATOR ':'
 
-enum TX_MSG
+enum
+{
+  RX_MSG_A,
+  RX_MSG_C,
+  RX_MSG_G,
+  RX_MSG_I,
+  RX_MSG_L,
+  RX_MSG_M,
+  RX_MSG_S,
+  RX_MSG_P,
+  RX_MSG_V,
+  NUM_RX_MSGS,
+};
+
+char * rxMsgList[NUM_RX_MSGS]=
+{
+  "a",
+  "c",
+  "g",
+  "i",
+  "l",
+  "m",
+  "s",
+  "p",
+  "v",
+};
+
+enum
 {
   TX_MSG_F,
   TX_MSG_A,
@@ -28,20 +55,6 @@ enum TX_MSG
   TX_MSG_T,
   TX_MSG_NACK,
   NUM_TX_MSGS,
-};
-
-enum RX_MSG
-{
-  RX_MSG_A,
-  RX_MSG_C,
-  RX_MSG_G,
-  RX_MSG_I,
-  RX_MSG_L,
-  RX_MSG_M,
-  RX_MSG_S,
-  RX_MSG_P,
-  RX_MSG_V,
-  NUM_RX_MSGS,
 };
 
 char * txMsgList[NUM_TX_MSGS]=
@@ -69,25 +82,11 @@ char * txMsgList[NUM_TX_MSGS]=
   "NACK",
 };
 
-char * rxMsgList[NUM_RX_MSGS]=
-{
-  "a",
-  "c",
-  "g",
-  "i",
-  "l",
-  "m",
-  "s",
-  "p",
-  "v",
-};
-
 struct COMMAND_MSG
 {
-  RX_MSG type;
+  int command;
   char value[MAX_LINE - 3];
-};
-COMMAND_MSG receivedMsg;
+} receivedMsg;
 
 enum STATE
 {
@@ -154,16 +153,74 @@ boolean newMsgAvailable()
     Serial.print("\r\nreceived: ");       // echo back the line we just read
     Serial.print(line);       // echo back the line we just read
     Serial.print("\r\n");
-//		if(line[0]==CHAR_MSG_INITIAL)
-//		{
+		Serial.print("line[0] = ");
+		Serial.println(line[0],BYTE);
+		if(line[0]==CHAR_MSG_INITIAL)
+		{
 			return true;
-//			Serial.println("!\r\n");
-//		}
-  }
-  else
-  {
-    return false;
-  }
+		}
+	}
+	return false;
+}
+
+bool isAlphaNum(char c)
+{
+	if(c >= '0' && c <= '9')
+	{
+		Serial.print("numeric: ");
+		Serial.println(c,BYTE);
+		return true;
+	}
+	if(c >= 'a' && c <= 'z')
+	{
+		Serial.print("alpha lower: ");
+		Serial.println(c,BYTE);
+		return true;
+	}
+	if(c >= 'A' && c <= 'Z')
+	{
+		Serial.print("ALPHA UPPER: ");
+		Serial.println(c,BYTE);
+		return true;
+	}
+	return false;
+}
+
+int extractMsgCommand(char *line)
+{
+	int idx = 0;
+	char commandString[MAX_LINE + 1];
+	boolean endOfCommand = false;
+
+	while(isAlphaNum(line[idx+1]) && line[idx+1]!=CHAR_MSG_SEPARATOR && line[idx+1]!='\0')
+	{
+		commandString[idx]=line[idx+1];	// 1st char in line is CHAR_MSG_INITIAL 
+		Serial.print("\r\nidx = ");
+		Serial.println(idx);
+		Serial.print("commandString[idx]=");
+		Serial.print(commandString[idx],BYTE);
+		Serial.print(" = ");
+		Serial.println(commandString[idx],DEC);
+		idx++;
+	}
+	commandString[idx]='\0';
+	if(idx>0)		// if commandString filled with at least one character
+	{
+		Serial.print("\r\ncommandString=");
+		Serial.println(commandString);
+		for(int i=0;i<NUM_RX_MSGS;i++)
+		{
+			Serial.print("\r\nrxMsgList[i]=");
+			Serial.println(rxMsgList[i]);
+			if(strcmp(commandString,rxMsgList[i])==0)
+			{
+				Serial.println("a match.");
+				return i;
+			}
+		}
+	}
+	Serial.println("not a match.");
+	return -1;
 }
 
 //---------------------------
@@ -172,6 +229,16 @@ void doStateIdle()
 {
   if(newMsgAvailable())
   {
+		receivedMsg.command=extractMsgCommand(line);
+		if(receivedMsg.command != -1)
+		{
+			Serial.print("new message: ");
+			Serial.println(rxMsgList[receivedMsg.command]);
+		}
+		else
+		{
+			Serial.println("bad message.");
+		}
   }
   else
   {
