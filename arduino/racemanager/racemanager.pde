@@ -100,7 +100,7 @@ STATE currentState=STATE_IDLE;
 
 //---------------------------
 
-void blinkLED()
+void blinkLed()
 {
 }
 
@@ -127,7 +127,10 @@ boolean lineAvailable(int max_line,char *line)
         if (c == '\r' || c == '\n')
           eol = true;
         else
+				{
+					Serial.print(c,BYTE);
           line[line_idx++] = c;
+				}
         if (line_idx >= max_line)
           eol = true;
         line[line_idx] = '\0';     // always terminate line, even if unfinished
@@ -148,9 +151,14 @@ boolean newMsgAvailable()
 {
   if(lineAvailable(MAX_LINE,line))
   {
+    Serial.print("\r\nreceived: ");       // echo back the line we just read
     Serial.print(line);       // echo back the line we just read
     Serial.print("\r\n");
-    return true;
+//		if(line[0]==CHAR_MSG_INITIAL)
+//		{
+			return true;
+//			Serial.println("!\r\n");
+//		}
   }
   else
   {
@@ -197,7 +205,7 @@ void setup()
 
 void loop()
 {
-  blinkLED();
+  blinkLed();
   switch(currentState)
   {
     case STATE_IDLE:
@@ -209,5 +217,7 @@ void loop()
     case STATE_RACING:
       doStateRacing();
       break;
+		default:
+			break;
   }
 }
