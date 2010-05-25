@@ -1,5 +1,6 @@
 #define MAX_LINE 20
 char line[MAX_LINE + 1];
+#define MAX_COMMAND_CHARS 3
 
 #define CHAR_MSG_INITIAL '!'
 #define CHAR_MSG_SEPARATOR ':'
@@ -29,6 +30,19 @@ char * rxMsgList[NUM_RX_MSGS]=
   "s",
   "p",
   "v",
+};
+
+boolean * rxMsgExpectsPayload[NUM_RX_MSGS]=
+{
+  true,			//"a",
+  true,			//"c",
+  false,		//"g",
+  true,			//"i",
+  true,			//"l",
+  false,		//"m",
+  false,		//"s",
+  false,		//"p",
+  false,		//"v",
 };
 
 enum
@@ -85,7 +99,8 @@ char * txMsgList[NUM_TX_MSGS]=
 struct COMMAND_MSG
 {
   int command;
-  char value[MAX_LINE - 3];
+	boolean hasPayload;
+  char value[MAX_LINE - MAX_COMMAND_CHARS];
 } receivedMsg;
 
 enum STATE
@@ -146,46 +161,25 @@ boolean lineAvailable(int max_line,char *line)
   }
 }
 
-boolean newMsgAvailable()
-{
-  if(lineAvailable(MAX_LINE,line))
-  {
-    Serial.print("\r\nreceived: ");       // echo back the line we just read
-    Serial.print(line);       // echo back the line we just read
-    Serial.print("\r\n");
-		Serial.print("line[0] = ");
-		Serial.println(line[0],BYTE);
-		if(line[0]==CHAR_MSG_INITIAL)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 bool isAlphaNum(char c)
 {
 	if(c >= '0' && c <= '9')
 	{
-		Serial.print("numeric: ");
-		Serial.println(c,BYTE);
 		return true;
 	}
 	if(c >= 'a' && c <= 'z')
 	{
-		Serial.print("alpha lower: ");
-		Serial.println(c,BYTE);
 		return true;
 	}
 	if(c >= 'A' && c <= 'Z')
 	{
-		Serial.print("ALPHA UPPER: ");
-		Serial.println(c,BYTE);
 		return true;
 	}
 	return false;
 }
 
+// Returns the ID of the command in the message.
+// Returns -1 if the message does not contain a proper command.
 int extractMsgCommand(char *line)
 {
 	int idx = 0;
@@ -223,11 +217,32 @@ int extractMsgCommand(char *line)
 	return -1;
 }
 
+int extractMsgPayload(char *line)
+{
+}
+
+boolean newMsgReceived()
+{
+  if(lineAvailable(MAX_LINE,line))
+  {
+    Serial.print("\r\nreceived: ");       // echo back the line we just read
+    Serial.print(line);       // echo back the line we just read
+    Serial.print("\r\n");
+		Serial.print("line[0] = ");
+		Serial.println(line[0],BYTE);
+		if(line[0]==CHAR_MSG_INITIAL)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 //---------------------------
 
 void doStateIdle()
 {
-  if(newMsgAvailable())
+  if(newMsgReceived())
   {
 		receivedMsg.command=extractMsgCommand(line);
 		if(receivedMsg.command != -1)
@@ -247,7 +262,7 @@ void doStateIdle()
 
 void doStateCountdown()
 {
-  if(newMsgAvailable())
+  if(newMsgReceived())
   {
   }
   else
@@ -257,7 +272,7 @@ void doStateCountdown()
 
 void doStateRacing()
 {
-  if(newMsgAvailable())
+  if(newMsgReceived())
   {
   }
   else
