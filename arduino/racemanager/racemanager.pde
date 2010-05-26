@@ -16,10 +16,10 @@ enum
   RX_MSG_S,
   RX_MSG_P,
   RX_MSG_V,
-  NUM_RX_MSGS,
+  NUM_RX_COMMANDS,
 };
 
-char * rxMsgList[NUM_RX_MSGS]=
+char * rxMsgList[NUM_RX_COMMANDS]=
 {
   "a",
   "c",
@@ -32,17 +32,17 @@ char * rxMsgList[NUM_RX_MSGS]=
   "v",
 };
 
-boolean * rxMsgExpectsPayload[NUM_RX_MSGS]=
+boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
 {
-  true,			//"a",
-  true,			//"c",
-  false,		//"g",
-  true,			//"i",
-  true,			//"l",
-  false,		//"m",
-  false,		//"s",
-  false,		//"p",
-  false,		//"v",
+  true,     //"a",
+  true,     //"c",
+  false,    //"g",
+  true,     //"i",
+  true,     //"l",
+  false,    //"m",
+  false,    //"s",
+  false,    //"p",
+  false,    //"v",
 };
 
 enum
@@ -98,8 +98,8 @@ char * txMsgList[NUM_TX_MSGS]=
 
 struct COMMAND_MSG
 {
-  int command;
-	boolean hasPayload;
+  char * command;
+  boolean hasPayload;
   char value[MAX_LINE - MAX_COMMAND_CHARS];
 } receivedMsg;
 
@@ -141,10 +141,10 @@ boolean lineAvailable(int max_line,char *line)
         if (c == '\r' || c == '\n')
           eol = true;
         else
-				{
-					Serial.print(c,BYTE);
+        {
+          Serial.print(c,BYTE);
           line[line_idx++] = c;
-				}
+        }
         if (line_idx >= max_line)
           eol = true;
         line[line_idx] = '\0';     // always terminate line, even if unfinished
@@ -163,79 +163,91 @@ boolean lineAvailable(int max_line,char *line)
 
 bool isAlphaNum(char c)
 {
-	if(c >= '0' && c <= '9')
-	{
-		return true;
-	}
-	if(c >= 'a' && c <= 'z')
-	{
-		return true;
-	}
-	if(c >= 'A' && c <= 'Z')
-	{
-		return true;
-	}
-	return false;
+  if(c >= '0' && c <= '9')
+  {
+    return true;
+  }
+  if(c >= 'a' && c <= 'z')
+  {
+    return true;
+  }
+  if(c >= 'A' && c <= 'Z')
+  {
+    return true;
+  }
+  return false;
 }
 
-// Returns the ID of the command in the message.
-// Returns -1 if the message does not contain a proper command.
-int extractMsgCommand(char *line)
-{
-	int idx = 0;
-	char commandString[MAX_LINE + 1];
-	boolean endOfCommand = false;
-
-	while(isAlphaNum(line[idx+1]) && line[idx+1]!=CHAR_MSG_SEPARATOR && line[idx+1]!='\0')
-	{
-		commandString[idx]=line[idx+1];	// 1st char in line is CHAR_MSG_INITIAL 
-		Serial.print("\r\nidx = ");
-		Serial.println(idx);
-		Serial.print("commandString[idx]=");
-		Serial.print(commandString[idx],BYTE);
-		Serial.print(" = ");
-		Serial.println(commandString[idx],DEC);
-		idx++;
-	}
-	commandString[idx]='\0';
-	if(idx>0)		// if commandString filled with at least one character
-	{
-		Serial.print("\r\ncommandString=");
-		Serial.println(commandString);
-		for(int i=0;i<NUM_RX_MSGS;i++)
-		{
-			Serial.print("\r\nrxMsgList[i]=");
-			Serial.println(rxMsgList[i]);
-			if(strcmp(commandString,rxMsgList[i])==0)
-			{
-				Serial.println("a match.");
-				return i;
-			}
-		}
-	}
-	Serial.println("not a match.");
-	return -1;
-}
-
-int extractMsgPayload(char *line)
-{
-}
-
+// Check for a new valid message from the serial port.
+// If one exists, update receivedMsg and return true.
+// Otherwise, return false.
 boolean newMsgReceived()
 {
+  char commandString[MAX_LINE + 1];
+  char payloadString[MAX_LINE + 1];
+  int lineIdx = 0;      // Used to index through string contained in "line".
+  int linePartIdx = 0;  // Used to index through "commandString" and "payloadString" .
+
   if(lineAvailable(MAX_LINE,line))
   {
-    Serial.print("\r\nreceived: ");       // echo back the line we just read
+    Serial.print("\r\nreceived: ");
     Serial.print(line);       // echo back the line we just read
     Serial.print("\r\n");
-		Serial.print("line[0] = ");
-		Serial.println(line[0],BYTE);
-		if(line[0]==CHAR_MSG_INITIAL)
-		{
-			return true;
-		}
-	}
-	return false;
+    Serial.print("line[0] = ");
+    Serial.println(line[0],BYTE);
+    if(line[0]==CHAR_MSG_INITIAL)
+    {
+      lineIdx++; // 1st char in line is CHAR_MSG_INITIAL 
+      // Extract the ID of the command in the message.
+      while(isAlphaNum(line[lineIdx]) && line[lineIdx]!=CHAR_MSG_SEPARATOR && line[lineIdx]!='\0')
+      {
+        commandString[linePartIdx]=line[lineIdx];
+        Serial.print("\r\nlineIdx = ");
+        Serial.println(lineIdx);
+        Serial.print("commandString[linePartIdx]=");
+        Serial.print(commandString[linePartIdx],BYTE);
+        Serial.print(" = ");
+        Serial.println(commandString[linePartIdx],DEC);
+        lineIdx++;
+        linePartIdx++;
+      }
+      commandString[linePartIdx]='\0';
+      if(linePartIdx>0)   // if commandString filled with at least one character
+      {
+        Serial.print("\r\ncommandString=");
+        Serial.println(commandString);
+        for(int i=0;i<NUM_RX_COMMANDS;i++)
+        {
+          if(strcmp(commandString,rxMsgList[i])==0)
+          {
+            Serial.println("a match.");
+            receivedMsg.command=commandString;
+            // Extract message payload
+            if(line[lineIdx]==CHAR_MSG_SEPARATOR)
+            {
+              receivedMsg.hasPayload=true;
+              lineIdx++;
+              linePartIdx=0;
+              while(isAlphaNum(line[lineIdx+1]) && line[lineIdx+1]!=CHAR_MSG_SEPARATOR && line[lineIdx+1]!='\0')
+              {
+                payloadString[linePartIdx]=line[lineIdx];
+                Serial.print("payloadString[linePartIdx]=");
+                Serial.print(payloadString[linePartIdx],BYTE);
+                Serial.print(" = ");
+                Serial.println(payloadString[linePartIdx],DEC);
+                lineIdx++;
+                linePartIdx++;
+              }
+            }
+            break;
+          }
+        }
+      }
+      Serial.println("not a match.");
+      return true;
+    }
+  }
+  return false;
 }
 
 //---------------------------
@@ -244,16 +256,13 @@ void doStateIdle()
 {
   if(newMsgReceived())
   {
-		receivedMsg.command=extractMsgCommand(line);
-		if(receivedMsg.command != -1)
-		{
-			Serial.print("new message: ");
-			Serial.println(rxMsgList[receivedMsg.command]);
-		}
-		else
-		{
-			Serial.println("bad message.");
-		}
+      Serial.print("new message: ");
+      Serial.println(rxMsgList[receivedMsg.command]);
+    }
+    else
+    {
+      Serial.println("bad message.");
+    }
   }
   else
   {
@@ -299,7 +308,7 @@ void loop()
     case STATE_RACING:
       doStateRacing();
       break;
-		default:
-			break;
+    default:
+      break;
   }
 }
