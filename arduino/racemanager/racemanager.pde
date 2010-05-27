@@ -98,7 +98,7 @@ char * txMsgList[NUM_TX_MSGS]=
 
 struct COMMAND_MSG
 {
-  char * command;
+  int command;
   boolean hasPayload;
   char value[MAX_LINE - MAX_COMMAND_CHARS];
 } receivedMsg;
@@ -221,7 +221,7 @@ boolean newMsgReceived()
           if(strcmp(commandString,rxMsgList[i])==0)
           {
             Serial.println("a match.");
-            receivedMsg.command=commandString;
+            receivedMsg.command=i;
             // Extract message payload
             if(line[lineIdx]==CHAR_MSG_SEPARATOR)
             {
@@ -256,17 +256,13 @@ void doStateIdle()
 {
   if(newMsgReceived())
   {
-      Serial.print("new message: ");
-      Serial.println(rxMsgList[receivedMsg.command]);
-    }
-    else
-    {
-      Serial.println("bad message.");
-    }
-  }
-  else
-  {
-  }
+		Serial.print("new message: ");
+		Serial.println(rxMsgList[receivedMsg.command]);
+	}
+	else
+	{
+		Serial.println("bad message.");
+	}
 }
 
 void doStateCountdown()
