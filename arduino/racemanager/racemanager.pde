@@ -119,6 +119,41 @@ void blinkLed()
 }
 
 //---------------------------
+// Serial Tx functions
+
+void sendTxMsg(int msgCommand)
+{
+	switch(msgCommand)
+	{
+		case TX_MSG_F:
+		case TX_MSG_A:
+		case TX_MSG_C:
+		case TX_MSG_CD:
+		case TX_MSG_G:
+		case TX_MSG_I:
+		case TX_MSG_L:
+		case TX_MSG_M:
+		case TX_MSG_S:
+		case TX_MSG_P:
+		case TX_MSG_V:
+		case TX_MSG_0:
+		case TX_MSG_1:
+		case TX_MSG_2:
+		case TX_MSG_3:
+		case TX_MSG_0F:
+		case TX_MSG_1F:
+		case TX_MSG_2F:
+		case TX_MSG_3F:
+		case TX_MSG_T:
+			break;
+		case TX_MSG_NACK:
+			Serial.println(txMsgList[TX_MSG_NACK]);
+			break;
+	}
+}
+
+//---------------------------
+// Serial Rx functions
 
 boolean lineAvailable(int max_line,char *line)
 {
@@ -192,12 +227,14 @@ boolean newMsgReceived()
   {
     Serial.print("\r\nreceived: ");
     Serial.print(line);       // echo back the line we just read
-    Serial.print("\r\n");
-    Serial.print("line[0] = ");
-    Serial.println(line[0],BYTE);
-    if(line[0]==CHAR_MSG_INITIAL)
+    Serial.println();
+    if(line[0]!=CHAR_MSG_INITIAL)
     {
-      lineIdx++; // 1st char in line is CHAR_MSG_INITIAL 
+			sendTxMsg(TX_MSG_NACK);
+		}
+		else // line[0]==CHAR_MSG_INITIAL
+    {
+      lineIdx++; // 1st char in line is CHAR_MSG_INITIAL
       // Extract the ID of the command in the message.
       while(isAlphaNum(line[lineIdx]) && line[lineIdx]!=CHAR_MSG_SEPARATOR && line[lineIdx]!='\0')
       {
@@ -243,7 +280,6 @@ boolean newMsgReceived()
           }
         }
       }
-      Serial.println("not a match.");
       return true;
     }
   }
@@ -261,7 +297,6 @@ void doStateIdle()
 	}
 	else
 	{
-		Serial.println("bad message.");
 	}
 }
 
