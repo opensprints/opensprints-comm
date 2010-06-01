@@ -2,6 +2,8 @@
 // * deal with MAX_LINE better.
 // * use more pointers to char instead of arrays of chars
 
+const char str_comm_protocol[] = "1.02";
+const char str_fw_version[] = "1.02";
 
 #define MAX_LINE 20
 #define MAX_COMMAND_CHARS 5
@@ -65,18 +67,19 @@ boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
   false,    // RX_MSG_V,
 };
 
+// Indexing corresponds to Rx counterparts for messages
+// a through v.
 enum
 {
-  TX_MSG_F,
   TX_MSG_A,
   TX_MSG_C,
-  TX_MSG_CD,
   TX_MSG_G,
-  TX_MSG_HW,
+  TX_MSG_HW,    // NOT YET IMPLEMENTED
   TX_MSG_I,
   TX_MSG_L,
   TX_MSG_M,
   TX_MSG_S,
+  TX_MSG_T,
   TX_MSG_P,
   TX_MSG_V,
   TX_MSG_0,
@@ -87,7 +90,9 @@ enum
   TX_MSG_1F,
   TX_MSG_2F,
   TX_MSG_3F,
-  TX_MSG_T,
+  TX_MSG_TIMESTAMP,
+  TX_MSG_F,
+  TX_MSG_CD,
   TX_MSG_NACK,
   TX_MSG_ERROR,
   NUM_TX_MSGS,
@@ -95,16 +100,15 @@ enum
 
 char * txMsgList[NUM_TX_MSGS]=
 {
-  "F",
   "A",
   "C",
-  "CD",
   "G",
   "HW",
   "I",
   "L",
   "M",
   "S",
+  "T",
   "P",
   "V",
   "0",
@@ -116,6 +120,8 @@ char * txMsgList[NUM_TX_MSGS]=
   "2f",
   "3f",
   "t",
+  "F",
+  "CD",
   "NACK",
   "ERROR",
 };
@@ -148,6 +154,7 @@ void blinkLed()
 //---------------------------
 // Serial Tx functions
 
+/*
 void sendTxMsg(int msgCommand)
 {
   switch(msgCommand)
@@ -179,6 +186,7 @@ void sendTxMsg(int msgCommand)
       break;
   }
 }
+*/
 
 //---------------------------
 // Serial Rx functions
@@ -205,7 +213,7 @@ boolean lineAvailable(int max_line,char *line)
           eol = true;
         else
         {
-          Serial.print(c,BYTE);
+        //Serial.print(c,BYTE);
           line[line_idx++] = c;
         }
         if (line_idx >= max_line)
@@ -241,57 +249,109 @@ boolean isAlphaNum(char c)
   return false;
 }
 
-// Check whether received message and payload are both valid
+// Check whether received message and payload are both valid.
+// Also, send TX responses when messages are in valid.
 boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
 {
   unsigned long int x;
-  Serial.println("isReceivedMsgValid...");
+//Serial.println("isReceivedMsgValid...");
 
-  Serial.print("testReceivedMsg.command = ");
-  Serial.print(testReceivedMsg.command,DEC);
-  Serial.print(" = ");
-  Serial.println(rxMsgList[testReceivedMsg.command]);
+//Serial.print("testReceivedMsg.command = ");
+//Serial.print(testReceivedMsg.command,DEC);
+//Serial.print(" = ");
+//Serial.println(rxMsgList[testReceivedMsg.command]);
 
-  Serial.print("\r\ntestReceivedMsg.hasPayload = ");
-  Serial.println(testReceivedMsg.hasPayload,DEC);
+//Serial.print("\r\ntestReceivedMsg.hasPayload = ");
+//Serial.println(testReceivedMsg.hasPayload,DEC);
 
-  Serial.print("\r\ntestReceivedMsg.payloadStr = ");
-  Serial.println(testReceivedMsg.payloadStr);
+//Serial.print("\r\ntestReceivedMsg.payloadStr = ");
+//Serial.println(testReceivedMsg.payloadStr);
 
   if(testReceivedMsg.hasPayload)
   {
     // testReceivedMsg has payload, but isn't supposed to.
     if(!rxMsgExpectsPayload[testReceivedMsg.command])
     {
-      Serial.println("testReceivedMsg has payload, but isn't supposed to.");
+      //Serial.println("testReceivedMsg has payload, but isn't supposed to.");
+      Serial.println(txMsgList[TX_MSG_NACK]);
       return(false);
     }
     else
     {
-      Serial.println("testReceivedMsg has payload and is supposed to.");
+      //Serial.println("testReceivedMsg has payload and is supposed to.");
       // testReceivedMsg has payload and is supposed to.
       // check whether the payload value is correct.
       x = atol(testReceivedMsg.payloadStr);
-      Serial.print("\r\n payload integer = ");
-      Serial.println(x,DEC);
-      Serial.println(x,HEX);
+      //Serial.print("\r\n payload integer = ");
+      //Serial.println(x,DEC);
+      //Serial.println(x,HEX);
       switch(testReceivedMsg.command)
       {
         case RX_MSG_A:
-          return(x >= 0 && x <= 65535);
+          if(x >= 0 && x <= 65535)
+          {
+            return(true);
+          }
+          else
+          {
+            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            Serial.print(":");
+            Serial.println(txMsgList[TX_MSG_NACK]);
+            return(false);
+          }
           break;
         case RX_MSG_C:
-          return(x >= 0 && x <= 127);
+          if(x >= 0 && x <= 127)
+          {
+            return(true);
+          }
+          else
+          {
+            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            Serial.print(":");
+            Serial.println(txMsgList[TX_MSG_NACK]);
+            return(false);
+          }
           break;
         case RX_MSG_I:
           // greater than zero and 32 bits or less.
-          return(x > 0 && x <= 0xFFFFFFFF);
+          if(x > 0 && x <= 0xFFFFFFFF)
+          {
+            return(true);
+          }
+          else
+          {
+            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            Serial.print(":");
+            Serial.println(txMsgList[TX_MSG_NACK]);
+            return(false);
+          }
           break;
         case RX_MSG_L:
-          return(x >= 0 && x <= 65535);
+          if(x >= 0 && x <= 65535)
+          {
+            return(true);
+          }
+          else
+          {
+            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            Serial.print(":");
+            Serial.println(txMsgList[TX_MSG_NACK]);
+            return(false);
+          }
           break;
         case RX_MSG_T:
-          return(x >= 0 && x <= 65535);
+          if(x >= 0 && x <= 65535)
+          {
+            return(true);
+          }
+          else
+          {
+            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            Serial.print(":");
+            Serial.println(txMsgList[TX_MSG_NACK]);
+            return(false);
+          }
           break;
         default:
           Serial.println("FART!!!");
@@ -305,13 +365,14 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
     // testReceivedMsg doesn't have payload, but is supposed to.
     if(rxMsgExpectsPayload[testReceivedMsg.command])
     {
-      Serial.println("testReceivedMsg doesn't have payload, but is supposed to.");
+      //Serial.println("testReceivedMsg doesn't have payload, but is supposed to.");
+      Serial.println(txMsgList[TX_MSG_NACK]);
       return(false);
     }
     else
     {
       // testReceivedMsg doesn't have payload, and isn't supposed to.
-      Serial.println("testReceivedMsg doesn't have payload, and isn't supposed to.");
+      //Serial.println("testReceivedMsg doesn't have payload, and isn't supposed to.");
       return(true);
     }
   }
@@ -331,12 +392,12 @@ boolean newMsgReceived()
 
   if(lineAvailable(MAX_LINE,line))
   {
-    Serial.print("\r\nreceived: ");
-    Serial.print(line);       // echo back the line we just read
-    Serial.println();
+  //Serial.print("\r\nreceived: ");
+  //Serial.print(line);       // echo back the line we just read
+  //Serial.println();
     if(line[0]!=CHAR_MSG_INITIAL)
     {
-      sendTxMsg(TX_MSG_NACK);
+      Serial.println(txMsgList[TX_MSG_NACK]);
       return(false);
     }
     else // line[0]==CHAR_MSG_INITIAL
@@ -355,8 +416,7 @@ boolean newMsgReceived()
         }
         else
         {
-          Serial.println("message string is too long.");
-          sendTxMsg(TX_MSG_NACK);
+          Serial.println(txMsgList[TX_MSG_NACK]);
           return(false);
         }
       }
@@ -364,7 +424,7 @@ boolean newMsgReceived()
       // Check whether tempCommandString is filled with at least one character.
       if(linePartIdx == 0)
       {
-        sendTxMsg(TX_MSG_NACK);
+        Serial.println(txMsgList[TX_MSG_NACK]);
         return(false);
       }
       // tempCommandString is filled with at least one character
@@ -372,7 +432,7 @@ boolean newMsgReceived()
       // Check for a bad character next in the string
       if(!(line[lineIdx] == '\0' || line[lineIdx] == CHAR_PAYLOAD_SEPARATOR))
       {
-        sendTxMsg(TX_MSG_NACK);
+        Serial.println(txMsgList[TX_MSG_NACK]);
         return(false);
       }
       // Not a bad character, so continue processing.
@@ -381,7 +441,7 @@ boolean newMsgReceived()
       {
         if(strcmp(tempCommandString,rxMsgList[i])==0)
         {
-          Serial.println("a match.");
+        //Serial.println("a match.");
           tempReceivedMsg.command=i;
           // Extract message payload
           if(line[lineIdx]=='\0')
@@ -395,7 +455,6 @@ boolean newMsgReceived()
             }
             else
             {
-              sendTxMsg(TX_MSG_NACK);
               return(false);
             }
           }
@@ -414,8 +473,8 @@ boolean newMsgReceived()
               }
               else
               {
-                Serial.println("payload string is too long.");
-                sendTxMsg(TX_MSG_NACK);
+              //Serial.println("payload string is too long.");
+                Serial.println(txMsgList[TX_MSG_NACK]);
                 return(false);
               }
             }
@@ -424,15 +483,15 @@ boolean newMsgReceived()
             // should be '\0'
             if(!(line[lineIdx]=='\0'))
             {
-              Serial.println("some junk characters in payload string.");
-              sendTxMsg(TX_MSG_NACK);
+            //Serial.println("some junk characters in payload string.");
+              Serial.println(txMsgList[TX_MSG_NACK]);
               return(false);
             }
             // Payload should have more than zero characters.
             if(linePartIdx == 0)
             {
-              Serial.println("Zero characters in payload string.");
-              sendTxMsg(TX_MSG_NACK);
+            //Serial.println("Zero characters in payload string.");
+              Serial.println(txMsgList[TX_MSG_NACK]);
               return(false);
             }
             // check the payload
@@ -444,7 +503,6 @@ boolean newMsgReceived()
             }
             else
             {
-              sendTxMsg(TX_MSG_NACK);
               return(false);
             }
           }
@@ -453,7 +511,7 @@ boolean newMsgReceived()
         if(++i == NUM_RX_COMMANDS)
         {
           // No message matches. 
-          sendTxMsg(TX_MSG_NACK);
+          Serial.println(txMsgList[TX_MSG_NACK]);
           return(false);
         }
       }
@@ -469,8 +527,16 @@ void doStateIdle()
 {
   if(newMsgReceived())
   {
-    Serial.print("new message: ");
-    Serial.println(rxMsgList[receivedMsg.command]);
+    Serial.print(txMsgList[receivedMsg.command]);
+    if(receivedMsg.hasPayload)
+    {
+      Serial.print(":");
+      Serial.println(receivedMsg.payloadStr);
+    }
+    else
+    {
+      Serial.println();
+    }
   }
   else
   {
