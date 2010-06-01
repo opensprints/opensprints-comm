@@ -245,24 +245,38 @@ boolean isAlphaNum(char c)
 boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
 {
   unsigned long int x;
-  if(receivedMsg.hasPayload)
+  Serial.println("isReceivedMsgValid...");
+
+  Serial.print("testReceivedMsg.command = ");
+  Serial.print(testReceivedMsg.command,DEC);
+  Serial.print(" = ");
+  Serial.println(rxMsgList[testReceivedMsg.command]);
+
+  Serial.print("\r\ntestReceivedMsg.hasPayload = ");
+  Serial.println(testReceivedMsg.hasPayload,DEC);
+
+  Serial.print("\r\ntestReceivedMsg.payloadStr = ");
+  Serial.println(testReceivedMsg.payloadStr);
+
+  if(testReceivedMsg.hasPayload)
   {
-    // receivedMsg has payload, but isn't supposed to.
-    if(!rxMsgExpectsPayload[receivedMsg.command])
+    // testReceivedMsg has payload, but isn't supposed to.
+    if(!rxMsgExpectsPayload[testReceivedMsg.command])
     {
-        Serial.println("receivedMsg has payload, but isn't supposed to.");
-        return(false);
+      Serial.println("testReceivedMsg has payload, but isn't supposed to.");
+      return(false);
     }
     else
     {
-      Serial.println("receivedMsg has payload and is supposed to.");
-      // receivedMsg has payload and is supposed to.
+      Serial.println("testReceivedMsg has payload and is supposed to.");
+      // testReceivedMsg has payload and is supposed to.
       // check whether the payload value is correct.
-      switch(receivedMsg.command)
+      x = atol(testReceivedMsg.payloadStr);
+      Serial.print("\r\n payload integer = ");
+      Serial.println(x,DEC);
+      Serial.println(x,HEX);
+      switch(testReceivedMsg.command)
       {
-        x = atoi(receivedMsg.payloadStr);
-        Serial.print("\r\n payload integer = ");
-        Serial.println(x,DEC);
         case RX_MSG_A:
           return(x >= 0 && x <= 65535);
           break;
@@ -280,18 +294,25 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           return(x >= 0 && x <= 65535);
           break;
         default:
+          Serial.println("FART!!!");
           return(false);
           break;
       }
     }
   }
-  else  // (!receivedMsg.hasPayload)
+  else  // (!testReceivedMsg.hasPayload)
   {
-    // receivedMsg doesn't have payload, but is supposed to.
-    if(rxMsgExpectsPayload[receivedMsg.command])
+    // testReceivedMsg doesn't have payload, but is supposed to.
+    if(rxMsgExpectsPayload[testReceivedMsg.command])
     {
-        Serial.println("receivedMsg doesn't have payload, but is supposed to.");
-        return(false);
+      Serial.println("testReceivedMsg doesn't have payload, but is supposed to.");
+      return(false);
+    }
+    else
+    {
+      // testReceivedMsg doesn't have payload, and isn't supposed to.
+      Serial.println("testReceivedMsg doesn't have payload, and isn't supposed to.");
+      return(true);
     }
   }
 }
