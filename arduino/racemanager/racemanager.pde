@@ -1,10 +1,12 @@
 // TODO:
 // * deal with MAX_LINE better.
 // * use more pointers to char instead of arrays of chars
+// * add a command to request final results of last race
+// * add a command to request an update of race progress.
 
-const char str_comm_protocol[] = "2.0";
-const char str_fw_version[] = "2.0";
-const char str_hw_version[] = "3";
+const char str_comm_protocol[] = "1.02";    // Some features are not yet completed
+const char str_fw_version[] = "1.02";
+const char str_hw_version[] = "3";  // Arduino with ATMega328p
 
 #define MAX_LINE 20
 #define MAX_COMMAND_CHARS 5
@@ -75,7 +77,7 @@ enum
   TX_MSG_A,
   TX_MSG_C,
   TX_MSG_G,
-  TX_MSG_HW,    // NOT YET IMPLEMENTED
+  TX_MSG_HW,
   TX_MSG_I,
   TX_MSG_L,
   TX_MSG_M,
@@ -137,6 +139,13 @@ enum STATE
 
 STATE currentState=STATE_IDLE;
 
+boolean inMockMode = false;
+
+//---------------------------
+
+unsigned int raceLengthTicks = 400;
+unsigned int raceTime = 0;
+
 //---------------------------
 
 void blinkLed()
@@ -151,43 +160,6 @@ void blinkLed()
       break;
   }
 }
-
-//---------------------------
-// Serial Tx functions
-
-/*
-void sendTxMsg(int msgCommand)
-{
-  switch(msgCommand)
-  {
-    case TX_MSG_F:
-    case TX_MSG_A:
-    case TX_MSG_C:
-    case TX_MSG_CD:
-    case TX_MSG_G:
-    case TX_MSG_I:
-    case TX_MSG_L:
-    case TX_MSG_M:
-    case TX_MSG_S:
-    case TX_MSG_P:
-    case TX_MSG_V:
-    case TX_MSG_0:
-    case TX_MSG_1:
-    case TX_MSG_2:
-    case TX_MSG_3:
-    case TX_MSG_0F:
-    case TX_MSG_1F:
-    case TX_MSG_2F:
-    case TX_MSG_3F:
-    case TX_MSG_T:
-    case TX_MSG_ERROR:
-      break;
-    case TX_MSG_NACK:
-      Serial.println(txMsgList[TX_MSG_NACK]);
-      break;
-  }
-}
-*/
 
 //---------------------------
 // Serial Rx functions
@@ -522,9 +494,21 @@ boolean newMsgReceived()
   return(false);
 }
 
+//---------------------------
+// Serial Tx functions
+
+void txRespondError(struct COMMAND_MSG rxMsg)
+{
+  char txStr[20];
+  strcpy(txStr, txMsgList[rxMsg.command]);
+  strcat(txStr, ":");
+  strcat(txStr, "ERROR");
+  Serial.println(txStr);
+}
+  
 void txRespond(struct COMMAND_MSG rxMsg)
 {
-  char txStr[80];
+  char txStr[20];
   strcpy(txStr, txMsgList[rxMsg.command]);
   if(rxMsg.hasPayload)
   {
@@ -563,12 +547,66 @@ void txRespond(struct COMMAND_MSG rxMsg)
 
 void doStateIdle()
 {
+  char txStr[20];
   if(newMsgReceived())
   {
-    txRespond(receivedMsg);
-  }
-  else
-  {
+    switch(receivedMsg.command)
+    {
+      case RX_MSG_A:
+      case RX_MSG_HW:
+      case RX_MSG_P:
+      case RX_MSG_V:
+        txRespond(receivedMsg);
+        break;
+      case RX_MSG_C:
+        txRespond(receivedMsg);
+        // @@@ record countdown seconds
+        break;
+      case RX_MSG_G:
+        if(raceLengthTicks != raceTime && (raceLengthTicks == 0 || raceTime == 0))
+        {
+          txRespond(receivedMsg);
+          currentState = STATE_RACING;
+        }
+        else
+        {
+          // Either raceLengthTicks or raceTime needs to be zero
+          // but not both.
+          txRespondError(receivedMsg);
+        }
+        break;
+      case RX_MSG_I:
+        txRespond(receivedMsg);
+        // @@@ record which racer positions/sensors are active
+        break;
+      case RX_MSG_L:
+        txRespond(receivedMsg);
+        // @@@ record value for raceLengthTicks
+        break;
+      case RX_MSG_M:
+        // @@@ toggle mock mode.
+        strcpy(txStr, txMsgList[receivedMsg.command]);
+        strcat(txStr, ":");
+        if(!inMockMode)
+        {
+          strcat(txStr, "ON");
+          inMockMode = true;
+        }
+        else
+        {
+          strcat(txStr, "OFF");
+          inMockMode = false;
+        }
+        Serial.println(txStr);
+        break;
+      case RX_MSG_S:
+          txRespondError(receivedMsg);
+        break;
+      case RX_MSG_T:
+        txRespond(receivedMsg);
+        // @@@ record value for raceTime
+        break;
+    }
   }
 }
 
