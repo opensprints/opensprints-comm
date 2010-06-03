@@ -6,7 +6,7 @@ include Timeout
 filename = ENV['OPENSPRINTS_PORT']||"/dev/ttyUSB0"
 serialport = File.open(filename, "w+")
 serialport.close
-sleep(2)
+sleep(1)
 
 stimulus = [
   "!a:0\r\n",
@@ -60,7 +60,7 @@ expected_response = [
   "NACK\r\n",
   "NACK\r\n",
   "NACK\r\n",
-  "HW:1\r\n",
+  "HW:3\r\n",
   "NACK\r\n",
   "I:NACK\r\n",
   "I:6\r\n",
@@ -78,9 +78,9 @@ expected_response = [
   "T:0\r\n",
   "T:65535\r\n",
   "T:NACK\r\n",
-  "P:1.02\r\n",
+  "P:2.0\r\n",
   "NACK\r\n",
-  "V:1.02\r\n",
+  "V:2.0\r\n",
   "NACK\r\n",
   ]
 

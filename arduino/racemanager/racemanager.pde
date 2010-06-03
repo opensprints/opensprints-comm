@@ -2,8 +2,9 @@
 // * deal with MAX_LINE better.
 // * use more pointers to char instead of arrays of chars
 
-const char str_comm_protocol[] = "1.02";
-const char str_fw_version[] = "1.02";
+const char str_comm_protocol[] = "2.0";
+const char str_fw_version[] = "2.0";
+const char str_hw_version[] = "3";
 
 #define MAX_LINE 20
 #define MAX_COMMAND_CHARS 5
@@ -521,24 +522,50 @@ boolean newMsgReceived()
   return(false);
 }
 
+void txRespond(struct COMMAND_MSG rxMsg)
+{
+  char txStr[80];
+  strcpy(txStr, txMsgList[rxMsg.command]);
+  if(rxMsg.hasPayload)
+  {
+    strcat(txStr, ":");
+    strcat(txStr, rxMsg.payloadStr);
+  }
+  else
+  {
+    switch(rxMsg.command)
+    {
+      case RX_MSG_G:
+      case RX_MSG_M:
+      case RX_MSG_S:
+        break;
+      case RX_MSG_HW:
+        strcat(txStr, ":");
+        strcat(txStr, str_hw_version);
+        break;
+      case RX_MSG_P:
+        strcat(txStr, ":");
+        strcat(txStr, str_comm_protocol);
+        break;
+      case RX_MSG_V:
+        strcat(txStr, ":");
+        strcat(txStr, str_fw_version);
+        break;
+      default:
+        Serial.println("FAAAART!\r\n");
+        break;
+    }
+  }
+  Serial.println(txStr);
+}
+
 //---------------------------
 
 void doStateIdle()
 {
-  char txStr[80];
   if(newMsgReceived())
   {
-    strcpy(txStr, txMsgList[receivedMsg.command]);
-    if(receivedMsg.hasPayload)
-    {
-      strcat(txStr, ":");
-      strcat(txStr, receivedMsg.payloadStr);
-      Serial.println(txStr);
-    }
-    else
-    {
-      Serial.println(txStr);
-    }
+    txRespond(receivedMsg);
   }
   else
   {
