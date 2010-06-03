@@ -525,17 +525,19 @@ boolean newMsgReceived()
 
 void doStateIdle()
 {
+  char txStr[80];
   if(newMsgReceived())
   {
-    Serial.print(txMsgList[receivedMsg.command]);
+    strcpy(txStr, txMsgList[receivedMsg.command]);
     if(receivedMsg.hasPayload)
     {
-      Serial.print(":");
-      Serial.println(receivedMsg.payloadStr);
+      strcat(txStr, ":");
+      strcat(txStr, receivedMsg.payloadStr);
+      Serial.println(txStr);
     }
     else
     {
-      Serial.println();
+      Serial.println(txStr);
     }
   }
   else
