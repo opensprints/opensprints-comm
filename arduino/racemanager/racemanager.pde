@@ -36,6 +36,7 @@ boolean inMockMode = false;
 
 unsigned long raceStartMillis;
 unsigned long raceMillis;
+unsigned int updateInterval = 250;   // milliseconds
 
 //----- Communications ------
 #define MAX_LINE_CHARS      20
@@ -660,7 +661,8 @@ void doStateIdle()
 void doStateCountdown()
 {
   unsigned long systemTime = millis();
-  char txStr[20];
+  char txStr0[20];
+  char txStr1[20];
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -687,6 +689,7 @@ void doStateCountdown()
         // Stop the countdown.
         txRespond(receivedMsg);
         switchToState(STATE_IDLE);
+        return;
         break;
 
       default:
@@ -696,16 +699,17 @@ void doStateCountdown()
   }
   else
   {
-    // One second elapsed.
     if((systemTime - lastCountDownMillis) > 1000)
+    // One second elapsed.
     {
       countdownSecsRemaining--;
       lastCountDownMillis = systemTime;
       // Announce new countdown second.
-      strcpy(txStr, txMsgList[TX_MSG_CD]);
-      strcat(txStr, ":");
-      strcat(txStr, itoa(countdownSecsRemaining,txStr,10));
-      Serial.println(txStr);
+      strcpy(txStr0, txMsgList[TX_MSG_CD]);
+      strcat(txStr0, ":");
+      itoa(countdownSecsRemaining, txStr1, 10);
+      strcat(txStr0, txStr1);
+      Serial.println(txStr0);
     }
     if(countdownSecsRemaining == 0)
     {
@@ -719,7 +723,59 @@ void doStateCountdown()
 
 void doStateRacing()
 {
-  long systemTime = millis();
+  unsigned long systemTime = millis();
+  static unsigned long lastUpdateMillis = 0;
+
+  // Watch for each racer to reach racelength ticks
+    // kill race when all racers arrive at the destination
+    // Report final time for each racer upon reaching the destination
+    //currentState=STATE_IDLE;
+
+  // @@@ TODO: Or instead, Watch for race timer to expire 
+    // kill race when time expires
+    // Report final distance for each racer
+    //currentState=STATE_IDLE;
+
+  raceMillis = systemTime - raceStartMillis;
+  if(raceMillis - lastUpdateMillis > updateInterval)
+  // Send race progress messages periodically.
+  {
+    lastUpdateMillis = raceMillis;
+    for(int i=0; i < NUM_SENSORS; i++)
+    {
+
+      if(inMockMode)
+      {
+        racerTicks[i]+=(i+1); // manufacture ticks.
+      }
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(racerTicks[i], DEC);
+    }
+    Serial.print("t: ");
+    Serial.println(raceMillis, DEC);
+    for(int i=0; i < NUM_SENSORS; i++)
+    {
+
+      if(!(racerFinishedFlags & (1<<i)))
+      // Finished racer hasn't been announced yet.
+      {
+        if(racerFinishTimeMillis[i] != 0)
+        {
+          Serial.print(i);
+          Serial.print("f: ");
+          Serial.println(racerFinishTimeMillis[i], DEC);
+          digitalWrite(racerGoLedPins[i],LOW);
+          racerFinishedFlags |= (1<<i);
+        }
+      }
+    }
+  }
+  if(racerFinishedFlags == ALL_RACERS_FINISHED_MASK)
+  {
+    switchToState(STATE_IDLE);
+    return;
+  }
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -743,29 +799,15 @@ void doStateRacing()
         break;
 
       case RX_MSG_S:
-        // @@@ Stop the race.
+        // Stop the race.
         txRespond(receivedMsg);
-        currentState=STATE_IDLE;
+        switchToState(STATE_IDLE);
         break;
 
       default:
         Serial.println("WHOOOPS!\r\n");
         break;
     }
-  }
-  else
-  {
-    // Send periodic race progress messages
-
-    // Watch for each racer to reach racelength ticks
-      // kill race when all racers arrive at the destination
-      // Report final time for each racer upon reaching the destination
-      //currentState=STATE_IDLE;
-
-    // @@@ OR Watch for race timer to expire 
-      // kill race when time expires
-      // Report final distance for each racer
-      //currentState=STATE_IDLE;
   }
 }
 
@@ -844,7 +886,22 @@ ISR(PCINT2_vect)
 void setup()
 {
   Serial.begin(115200); 
-  currentState = STATE_IDLE;
+  pinMode(PIN_STATUS_LED, OUTPUT);
+  for(int i=0; i < NUM_SENSORS; i++)
+  {
+    pinMode(racerGoLedPins[i], OUTPUT);
+    digitalWrite(racerGoLedPins[i], LOW);
+    pinMode(sensorPinsArduino[i], INPUT);
+    digitalWrite(sensorPinsArduino[i], HIGH);   // set weak pull-up
+  }
+  // make digital IO pins 2,3,4,5 pin change interrupts
+  PCICR |= (1 << PCIE2);
+  PCMSK2 |= (1 << PCINT18);
+  PCMSK2 |= (1 << PCINT19);
+  PCMSK2 |= (1 << PCINT20);
+  PCMSK2 |= (1 << PCINT21);
+
+  switchToState(STATE_IDLE);
 }
 
 void loop()
