@@ -1,5 +1,5 @@
 // TODO:
-// * deal with MAX_LINE better.
+// * deal with MAX_LINE_CHARS better.
 // * use more pointers to char instead of arrays of chars.
 // * add a command to request final results of last race.
 // * add a command to request an update of race progress.
@@ -7,19 +7,28 @@
 
 const char str_comm_protocol[] = "1.02";    // Some features are not yet completed
 const char str_fw_version[] = "1.02";
-const char str_hw_version[] = "3";  // Arduino with ATMega328p
+const char str_hw_version[] = "3";          // Arduino with ATMega328p
 
 #define PIN_STATUS_LED 13
 
-//---- Communications ----
-#define MAX_LINE 20
-#define MAX_COMMAND_CHARS 5
-#define MAX_PAYLOAD_CHARS (MAX_LINE - MAX_COMMAND_CHARS)
+unsigned char countdownSecs = 5;
+unsigned int countdownSecsRemaining;
 
-char line[MAX_LINE + 1];
+unsigned int raceLengthTicks = 1000;
+unsigned int raceDurationSecs = 0;
 
-#define CHAR_MSG_INITIAL '!'
-#define CHAR_PAYLOAD_SEPARATOR ':'
+boolean inMockMode = false;
+
+
+//----- Communications ------
+#define MAX_LINE_CHARS      20
+#define MAX_COMMAND_CHARS   5
+#define MAX_PAYLOAD_CHARS   (MAX_LINE_CHARS - MAX_COMMAND_CHARS)
+
+char line[MAX_LINE_CHARS + 1];
+
+#define CHAR_MSG_INITIAL        '!'
+#define CHAR_PAYLOAD_SEPARATOR  ':'
 
 struct COMMAND_MSG
 {
@@ -139,16 +148,7 @@ enum STATE
   STATE_COUNTDOWN,
   STATE_RACING,
   NUM_STATES,
-};
-
-STATE currentState=STATE_IDLE;
-
-boolean inMockMode = false;
-
-//---------------------------
-
-unsigned int raceLengthTicks = 400;
-unsigned int raceDurationSecs = 0;
+} currentState;
 
 //---------------------------
 // Serial Rx functions
@@ -216,18 +216,6 @@ boolean isAlphaNum(char c)
 boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
 {
   unsigned long int x;
-//Serial.println("isReceivedMsgValid...");
-
-//Serial.print("testReceivedMsg.command = ");
-//Serial.print(testReceivedMsg.command,DEC);
-//Serial.print(" = ");
-//Serial.println(rxMsgList[testReceivedMsg.command]);
-
-//Serial.print("\r\ntestReceivedMsg.hasPayload = ");
-//Serial.println(testReceivedMsg.hasPayload,DEC);
-
-//Serial.print("\r\ntestReceivedMsg.payloadStr = ");
-//Serial.println(testReceivedMsg.payloadStr);
 
   if(testReceivedMsg.hasPayload)
   {
@@ -240,7 +228,6 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
     }
     else
     {
-      //Serial.println("testReceivedMsg has payload and is supposed to.");
       // testReceivedMsg has payload and is supposed to.
       // check whether the payload value is correct.
       x = atol(testReceivedMsg.payloadStr);
@@ -262,6 +249,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
+
         case RX_MSG_C:
           if(x >= 0 && x <= 127)
           {
@@ -275,6 +263,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
+          
         case RX_MSG_I:
           // greater than zero and 32 bits or less.
           if(x > 0 && x <= 0xFFFFFFFF)
@@ -289,6 +278,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
+          
         case RX_MSG_L:
           if(x >= 0 && x <= 65535)
           {
@@ -302,6 +292,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
+          
         case RX_MSG_T:
           if(x >= 0 && x <= 65535)
           {
@@ -315,6 +306,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
+          
         default:
           Serial.println("FART!!!");
           return(false);
@@ -327,14 +319,12 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
     // testReceivedMsg doesn't have payload, but is supposed to.
     if(rxMsgExpectsPayload[testReceivedMsg.command])
     {
-      //Serial.println("testReceivedMsg doesn't have payload, but is supposed to.");
       Serial.println(txMsgList[TX_MSG_NACK]);
       return(false);
     }
     else
     {
       // testReceivedMsg doesn't have payload, and isn't supposed to.
-      //Serial.println("testReceivedMsg doesn't have payload, and isn't supposed to.");
       return(true);
     }
   }
@@ -352,7 +342,7 @@ boolean newMsgReceived()
   unsigned int linePartIdx;  // Used to index through "tempCommandString" and "tempPayloadString" .
   int i;
 
-  if(lineAvailable(MAX_LINE,line))
+  if(lineAvailable(MAX_LINE_CHARS,line))
   {
   //Serial.print("\r\nreceived: ");
   //Serial.print(line);       // echo back the line we just read
@@ -512,18 +502,22 @@ void txRespond(struct COMMAND_MSG rxMsg)
       case RX_MSG_M:
       case RX_MSG_S:
         break;
+        
       case RX_MSG_HW:
         strcat(txStr, ":");
         strcat(txStr, str_hw_version);
         break;
+        
       case RX_MSG_P:
         strcat(txStr, ":");
         strcat(txStr, str_comm_protocol);
         break;
+        
       case RX_MSG_V:
         strcat(txStr, ":");
         strcat(txStr, str_fw_version);
         break;
+        
       default:
         Serial.println("FAAAART!\r\n");
         break;
@@ -533,6 +527,28 @@ void txRespond(struct COMMAND_MSG rxMsg)
 }
 
 //---------------------------
+
+void switchToState(int newState)
+{
+  switch(newState)
+  {
+    case STATE_IDLE:
+      currentState = STATE_IDLE;
+      break;
+      
+    case STATE_COUNTDOWN:
+      countdownSecsRemaining = countdownSecs;
+      currentState = STATE_COUNTDOWN;
+      break;
+      
+    case STATE_RACING:
+      currentState = STATE_RACING;
+      break;
+      
+    default:
+      break;
+  }
+}
 
 void doStateIdle()
 {
@@ -547,33 +563,42 @@ void doStateIdle()
       case RX_MSG_V:
         txRespond(receivedMsg);
         break;
+
       case RX_MSG_C:
         txRespond(receivedMsg);
-        // @@@ record countdown seconds
+        countdownSecs = atoi(receivedMsg.payloadStr);
         break;
+
       case RX_MSG_G:
+        // Either raceLengthTicks or raceDurationSecs needs to be zero
+        // but not both.
         if(raceLengthTicks != raceDurationSecs && (raceLengthTicks == 0 || raceDurationSecs == 0))
         {
           txRespond(receivedMsg);
-          currentState = STATE_COUNTDOWN;
+          switchToState(STATE_COUNTDOWN);
         }
         else
         {
-          // Either raceLengthTicks or raceDurationSecs needs to be zero
-          // but not both.
           txRespondError(receivedMsg);
         }
         break;
+
       case RX_MSG_I:
-        txRespond(receivedMsg);
-        // @@@ record which racer positions/sensors are active
+        // @@@ TO DO: record which racer positions/sensors are active
+        //txRespond(receivedMsg);
+
+        // @@@ for now, all 4 fixed inputs are active.
+        Serial.println("NACK\r\n");
         break;
+
       case RX_MSG_L:
         txRespond(receivedMsg);
-        // @@@ record value for raceLengthTicks
+        // Record value for raceLengthTicks
+        raceLengthTicks = atol(receivedMsg.payloadStr);
         break;
+
       case RX_MSG_M:
-        // @@@ toggle mock mode.
+        // Toggle mock mode.
         strcpy(txStr, txMsgList[receivedMsg.command]);
         strcat(txStr, ":");
         if(!inMockMode)
@@ -588,13 +613,17 @@ void doStateIdle()
         }
         Serial.println(txStr);
         break;
+
       case RX_MSG_S:
           txRespondError(receivedMsg);
         break;
+
       case RX_MSG_T:
         txRespond(receivedMsg);
-        // @@@ record value for raceDurationSecs
+        // record value for raceDurationSecs
+        raceDurationSecs = atol(receivedMsg.payloadStr);
         break;
+
       default:
         Serial.println("WHOOPS!\r\n");
         break;
@@ -604,6 +633,7 @@ void doStateIdle()
 
 void doStateCountdown()
 {
+  static unsigned long lastCountDownMillis;
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -617,6 +647,7 @@ void doStateCountdown()
       case RX_MSG_I:
         txRespondError(receivedMsg);
         break;
+
       // Respond to handshake or info requests.
       case RX_MSG_A:
       case RX_MSG_HW:
@@ -624,11 +655,13 @@ void doStateCountdown()
       case RX_MSG_V:
         txRespond(receivedMsg);
         break;
+
       case RX_MSG_S:
         // @@@ Stop the race.
         txRespond(receivedMsg);
         currentState=STATE_IDLE;
         break;
+
       default:
         Serial.println("WHOOOPS!\r\n");
         break;
@@ -660,6 +693,7 @@ void doStateRacing()
       case RX_MSG_I:
         txRespondError(receivedMsg);
         break;
+
       // Respond to handshake or info requests.
       case RX_MSG_A:
       case RX_MSG_HW:
@@ -667,11 +701,13 @@ void doStateRacing()
       case RX_MSG_V:
         txRespond(receivedMsg);
         break;
+
       case RX_MSG_S:
         // @@@ Stop the race.
         txRespond(receivedMsg);
         currentState=STATE_IDLE;
         break;
+
       default:
         Serial.println("WHOOOPS!\r\n");
         break;
@@ -712,6 +748,7 @@ void blinkLed()
         digitalWrite(PIN_STATUS_LED, lastStatusLEDValue);
       }
       break;
+
     case STATE_COUNTDOWN:
       // moderate flashing
       if (millis() - previousStatusBlinkMillis > statusBlinkInterval)
@@ -721,6 +758,7 @@ void blinkLed()
         digitalWrite(PIN_STATUS_LED, lastStatusLEDValue);
       }
       break;
+
     case STATE_RACING:
       // rapid flashing
       if (millis() - previousStatusBlinkMillis > statusBlinkInterval / 4)
@@ -738,6 +776,7 @@ void blinkLed()
 void setup()
 {
   Serial.begin(115200); 
+  currentState = STATE_IDLE;
 }
 
 void loop()
@@ -748,12 +787,15 @@ void loop()
     case STATE_IDLE:
       doStateIdle();
       break;
+
     case STATE_COUNTDOWN:
       doStateCountdown();
       break;
+
     case STATE_RACING:
       doStateRacing();
       break;
+
     default:
       break;
   }
