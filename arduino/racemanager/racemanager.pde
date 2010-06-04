@@ -1,13 +1,17 @@
 // TODO:
 // * deal with MAX_LINE better.
-// * use more pointers to char instead of arrays of chars
-// * add a command to request final results of last race
+// * use more pointers to char instead of arrays of chars.
+// * add a command to request final results of last race.
 // * add a command to request an update of race progress.
+// * add a command to set frequency of race progress updates.
 
 const char str_comm_protocol[] = "1.02";    // Some features are not yet completed
 const char str_fw_version[] = "1.02";
 const char str_hw_version[] = "3";  // Arduino with ATMega328p
 
+#define PIN_STATUS_LED 13
+
+//---- Communications ----
 #define MAX_LINE 20
 #define MAX_COMMAND_CHARS 5
 #define MAX_PAYLOAD_CHARS (MAX_LINE - MAX_COMMAND_CHARS)
@@ -145,21 +149,6 @@ boolean inMockMode = false;
 
 unsigned int raceLengthTicks = 400;
 unsigned int raceDurationSecs = 0;
-
-//---------------------------
-
-void blinkLed()
-{
-  switch(currentState)
-  {
-    case STATE_IDLE:
-      break;
-    case STATE_COUNTDOWN:
-      break;
-    case STATE_RACING:
-      break;
-  }
-}
 
 //---------------------------
 // Serial Rx functions
@@ -566,7 +555,7 @@ void doStateIdle()
         if(raceLengthTicks != raceDurationSecs && (raceLengthTicks == 0 || raceDurationSecs == 0))
         {
           txRespond(receivedMsg);
-          currentState = STATE_RACING;
+          currentState = STATE_COUNTDOWN;
         }
         else
         {
@@ -703,6 +692,48 @@ void doStateRacing()
       //currentState=STATE_IDLE;
   }
 }
+
+//---------------------------
+
+void blinkLed()
+{
+  const unsigned int statusBlinkInterval = 250;     // number of millis
+  static int lastStatusLEDValue = LOW;
+  static unsigned long previousStatusBlinkMillis = 0;
+
+  switch(currentState)
+  {
+    case STATE_IDLE:
+      // slow flashing
+      if (millis() - previousStatusBlinkMillis > statusBlinkInterval * 4)
+      {
+        previousStatusBlinkMillis = millis();
+        lastStatusLEDValue = !lastStatusLEDValue;
+        digitalWrite(PIN_STATUS_LED, lastStatusLEDValue);
+      }
+      break;
+    case STATE_COUNTDOWN:
+      // moderate flashing
+      if (millis() - previousStatusBlinkMillis > statusBlinkInterval)
+      {
+        previousStatusBlinkMillis = millis();
+        lastStatusLEDValue = !lastStatusLEDValue;
+        digitalWrite(PIN_STATUS_LED, lastStatusLEDValue);
+      }
+      break;
+    case STATE_RACING:
+      // rapid flashing
+      if (millis() - previousStatusBlinkMillis > statusBlinkInterval / 4)
+      {
+        previousStatusBlinkMillis = millis();
+        lastStatusLEDValue = !lastStatusLEDValue;
+        digitalWrite(PIN_STATUS_LED, lastStatusLEDValue);
+      }
+      break;
+  }
+}
+
+//---------------------------
 
 void setup()
 {
