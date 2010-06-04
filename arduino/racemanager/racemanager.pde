@@ -11,14 +11,31 @@ const char str_hw_version[] = "3";          // Arduino with ATMega328p
 
 #define PIN_STATUS_LED 13
 
+#define NUM_SENSORS 4
+const int racerGoLedPins[NUM_SENSORS] = {9,10,11,12};     // Arduino digital IOs
+const int sensorPinsArduino[NUM_SENSORS] = {2,3,4,5};     // Arduino digital IOs
+const int sensorPortDPinsAvr[NUM_SENSORS] = {2,3,4,5};    // Arduino digital IOs
+
+int previousSensorValues;
+int currentSensorValues;
+
+unsigned long racerTicks[NUM_SENSORS] = {0,0,0,0};
+unsigned long racerFinishTimeMillis[NUM_SENSORS] = {0,0,0,0};
+
+unsigned int racerFinishedFlags = 0;
+#define ALL_RACERS_FINISHED_MASK  0x0F // binary 00001111
+
 unsigned char countdownSecs = 5;
 unsigned int countdownSecsRemaining;
+unsigned long lastCountDownMillis;
 
-unsigned int raceLengthTicks = 1000;
+unsigned int raceLengthTicks = 500;
 unsigned int raceDurationSecs = 0;
 
 boolean inMockMode = false;
 
+unsigned long raceStartMillis;
+unsigned long raceMillis;
 
 //----- Communications ------
 #define MAX_LINE_CHARS      20
@@ -538,10 +555,19 @@ void switchToState(int newState)
       
     case STATE_COUNTDOWN:
       countdownSecsRemaining = countdownSecs;
+      lastCountDownMillis = millis();
       currentState = STATE_COUNTDOWN;
       break;
       
     case STATE_RACING:
+      raceStartMillis = millis();
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        racerFinishedFlags = 0;
+        racerTicks[i] = 0;
+        racerFinishTimeMillis[i] = 0;
+        digitalWrite(racerGoLedPins[i],HIGH);
+      }
       currentState = STATE_RACING;
       break;
       
@@ -633,7 +659,8 @@ void doStateIdle()
 
 void doStateCountdown()
 {
-  static unsigned long lastCountDownMillis;
+  unsigned long systemTime = millis();
+  char txStr[20];
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -657,9 +684,9 @@ void doStateCountdown()
         break;
 
       case RX_MSG_S:
-        // @@@ Stop the race.
+        // Stop the countdown.
         txRespond(receivedMsg);
-        currentState=STATE_IDLE;
+        switchToState(STATE_IDLE);
         break;
 
       default:
@@ -669,17 +696,30 @@ void doStateCountdown()
   }
   else
   {
-    // @@@ Announce new countdown second
+    // One second elapsed.
+    if((systemTime - lastCountDownMillis) > 1000)
+    {
+      countdownSecsRemaining--;
+      lastCountDownMillis = systemTime;
+      // Announce new countdown second.
+      strcpy(txStr, txMsgList[TX_MSG_CD]);
+      strcat(txStr, ":");
+      strcat(txStr, itoa(countdownSecsRemaining,txStr,10));
+      Serial.println(txStr);
+    }
+    if(countdownSecsRemaining == 0)
+    {
+      // When countdown hits zero, start race
+      switchToState(STATE_RACING);
+    }
     
-    // When countdown hits zero, start race
-    //currentState=STATE_RACING;
-
-    // @@@ Announce any false starts.
+    // @@@ TODO: Announce any false starts.
   }
 }
 
 void doStateRacing()
 {
+  long systemTime = millis();
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -772,7 +812,35 @@ void blinkLed()
 }
 
 //---------------------------
+ISR(PCINT2_vect)
+{
+  unsigned int newRisingEdges;
 
+  if(currentState == STATE_RACING)
+  {
+    if(!inMockMode)
+    {
+      raceMillis = millis() - raceStartMillis;
+      // Register rising edge events
+      previousSensorValues = currentSensorValues;
+      currentSensorValues = PIND;
+      newRisingEdges = (previousSensorValues ^ currentSensorValues) & currentSensorValues;
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
+        {
+          racerTicks[i]++;
+        }
+        if(racerTicks[i] == raceLengthTicks)
+        {
+          racerFinishTimeMillis[i] = raceMillis;
+        }
+      }
+    }
+  }
+}
+
+//---------------------------
 void setup()
 {
   Serial.begin(115200); 
