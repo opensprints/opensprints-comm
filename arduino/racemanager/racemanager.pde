@@ -144,7 +144,7 @@ boolean inMockMode = false;
 //---------------------------
 
 unsigned int raceLengthTicks = 400;
-unsigned int raceTime = 0;
+unsigned int raceDurationSecs = 0;
 
 //---------------------------
 
@@ -563,14 +563,14 @@ void doStateIdle()
         // @@@ record countdown seconds
         break;
       case RX_MSG_G:
-        if(raceLengthTicks != raceTime && (raceLengthTicks == 0 || raceTime == 0))
+        if(raceLengthTicks != raceDurationSecs && (raceLengthTicks == 0 || raceDurationSecs == 0))
         {
           txRespond(receivedMsg);
           currentState = STATE_RACING;
         }
         else
         {
-          // Either raceLengthTicks or raceTime needs to be zero
+          // Either raceLengthTicks or raceDurationSecs needs to be zero
           // but not both.
           txRespondError(receivedMsg);
         }
@@ -604,7 +604,10 @@ void doStateIdle()
         break;
       case RX_MSG_T:
         txRespond(receivedMsg);
-        // @@@ record value for raceTime
+        // @@@ record value for raceDurationSecs
+        break;
+      default:
+        Serial.println("WHOOPS!\r\n");
         break;
     }
   }
@@ -614,9 +617,42 @@ void doStateCountdown()
 {
   if(newMsgReceived())
   {
+    switch(receivedMsg.command)
+    {
+      // Respond with error to these. They are not valid in this state.
+      case RX_MSG_C:
+      case RX_MSG_G:
+      case RX_MSG_M:
+      case RX_MSG_L:
+      case RX_MSG_T:
+      case RX_MSG_I:
+        txRespondError(receivedMsg);
+        break;
+      // Respond to handshake or info requests.
+      case RX_MSG_A:
+      case RX_MSG_HW:
+      case RX_MSG_P:
+      case RX_MSG_V:
+        txRespond(receivedMsg);
+        break;
+      case RX_MSG_S:
+        // @@@ Stop the race.
+        txRespond(receivedMsg);
+        currentState=STATE_IDLE;
+        break;
+      default:
+        Serial.println("WHOOOPS!\r\n");
+        break;
+    }
   }
   else
   {
+    // @@@ Announce new countdown second
+    
+    // When countdown hits zero, start race
+    //currentState=STATE_RACING;
+
+    // @@@ Announce any false starts.
   }
 }
 
@@ -624,9 +660,47 @@ void doStateRacing()
 {
   if(newMsgReceived())
   {
+    switch(receivedMsg.command)
+    {
+      // Respond with error to these. They are not valid in this state.
+      case RX_MSG_C:
+      case RX_MSG_G:
+      case RX_MSG_M:
+      case RX_MSG_L:
+      case RX_MSG_T:
+      case RX_MSG_I:
+        txRespondError(receivedMsg);
+        break;
+      // Respond to handshake or info requests.
+      case RX_MSG_A:
+      case RX_MSG_HW:
+      case RX_MSG_P:
+      case RX_MSG_V:
+        txRespond(receivedMsg);
+        break;
+      case RX_MSG_S:
+        // @@@ Stop the race.
+        txRespond(receivedMsg);
+        currentState=STATE_IDLE;
+        break;
+      default:
+        Serial.println("WHOOOPS!\r\n");
+        break;
+    }
   }
   else
   {
+    // Send periodic race progress messages
+
+    // Watch for each racer to reach racelength ticks
+      // kill race when all racers arrive at the destination
+      // Report final time for each racer upon reaching the destination
+      //currentState=STATE_IDLE;
+
+    // @@@ OR Watch for race timer to expire 
+      // kill race when time expires
+      // Report final distance for each racer
+      //currentState=STATE_IDLE;
   }
 }
 
