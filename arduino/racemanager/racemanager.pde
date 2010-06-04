@@ -725,6 +725,8 @@ void doStateRacing()
 {
   unsigned long systemTime = millis();
   static unsigned long lastUpdateMillis = 0;
+  char txStr0[80];
+  char txStr1[10];
 
   // Watch for each racer to reach racelength ticks
     // kill race when all racers arrive at the destination
@@ -741,35 +743,48 @@ void doStateRacing()
   // Send race progress messages periodically.
   {
     lastUpdateMillis = raceMillis;
+    strcpy(txStr0, "\r\n");
     for(int i=0; i < NUM_SENSORS; i++)
     {
 
       if(inMockMode)
       {
-        racerTicks[i]+=(i+1); // manufacture ticks.
+        racerTicks[i]+=(i+4); // manufacture ticks.
+        if(racerTicks[i] >= raceLengthTicks)
+        {
+          racerFinishTimeMillis[i] = raceMillis;
+        }
       }
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(racerTicks[i], DEC);
+      itoa(i, txStr1, 10);
+      strcat(txStr0, txStr1);
+      strcat(txStr0, ": ");
+      itoa(racerTicks[i], txStr1, 10);
+      strcat(txStr0, txStr1);
+      strcat(txStr0, "\r\n");
     }
-    Serial.print("t: ");
-    Serial.println(raceMillis, DEC);
+    strcat(txStr0, "t: ");
+    ltoa(raceMillis, txStr1, 10);
+    strcat(txStr0, txStr1);
     for(int i=0; i < NUM_SENSORS; i++)
     {
-
       if(!(racerFinishedFlags & (1<<i)))
       // Finished racer hasn't been announced yet.
       {
         if(racerFinishTimeMillis[i] != 0)
         {
-          Serial.print(i);
-          Serial.print("f: ");
-          Serial.println(racerFinishTimeMillis[i], DEC);
+          strcat(txStr0, "\r\n");
+          itoa(i, txStr1, 10);
+          strcat(txStr0, txStr1);
+          strcat(txStr0, "f: ");
+          itoa(racerFinishTimeMillis[i], txStr1, 10);
+          strcat(txStr0, txStr1);
+
           digitalWrite(racerGoLedPins[i],LOW);
           racerFinishedFlags |= (1<<i);
         }
       }
     }
+    Serial.println(txStr0);
   }
   if(racerFinishedFlags == ALL_RACERS_FINISHED_MASK)
   {
@@ -873,7 +888,7 @@ ISR(PCINT2_vect)
         {
           racerTicks[i]++;
         }
-        if(racerTicks[i] == raceLengthTicks)
+        if(racerTicks[i] >= raceLengthTicks)
         {
           racerFinishTimeMillis[i] = raceMillis;
         }
