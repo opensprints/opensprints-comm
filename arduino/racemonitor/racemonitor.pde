@@ -61,11 +61,11 @@ enum
   RX_MSG_C,     // Countdown seconds
   RX_MSG_G,     // Start race countdown, then race.
   RX_MSG_HW,    // request hw type and version
-  RX_MSG_I,     // Flags for which sensors are active, 0 thru 31.
+  RX_MSG_I,     // Flags for which sensors are active, 0 thru 31. (NOT YET IMPLEMENTED)
   RX_MSG_L,     // Number of ticks in a distance race
   RX_MSG_M,     // Toggle "mock mode" (fake race outputs)
   RX_MSG_S,     // Kill ongoing race
-  RX_MSG_T,     // Number of seconds in a fixed-time race
+  RX_MSG_T,     // Number of seconds in a fixed-time race (NOT YET IMPLEMENTED)
   RX_MSG_P,     // Request protocol version
   RX_MSG_V,     // Request firmware version
   NUM_RX_COMMANDS,
@@ -109,7 +109,7 @@ enum
   TX_MSG_C,
   TX_MSG_G,
   TX_MSG_HW,
-  TX_MSG_I,
+  TX_MSG_I,             // (NOT YET IMPLEMENTED)
   TX_MSG_L,
   TX_MSG_M,
   TX_MSG_S,
@@ -124,8 +124,8 @@ enum
   TX_MSG_1F,
   TX_MSG_2F,
   TX_MSG_3F,
-  TX_MSG_TIMESTAMP,
-  TX_MSG_F,
+  TX_MSG_TIMESTAMP,     // (NOT YET IMPLEMENTED)
+  TX_MSG_F,             // (NOT YET IMPLEMENTED)
   TX_MSG_CD,
   TX_MSG_NACK,
   TX_MSG_ERROR,
@@ -269,7 +269,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           break;
 
         case RX_MSG_C:
-          if(x >= 0 && x <= 127)
+          if(x >= 0 && x <= 255)
           {
             return(true);
           }
