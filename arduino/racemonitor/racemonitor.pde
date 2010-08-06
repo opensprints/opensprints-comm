@@ -28,6 +28,8 @@ unsigned int racerFinishedFlags = 0;
 unsigned char countdownSecs = 5;
 unsigned int countdownSecsRemaining;
 unsigned long lastCountDownMillis;
+int falseStartFlags; // Bit-wise representation: if bit is set, false start was
+                     // detected.
 
 unsigned int raceLengthTicks = 500;
 unsigned int raceDurationSecs = 0;
@@ -261,7 +263,8 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           }
           else
           {
-            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            // Matching Rx and Tx commands have the same index
+            Serial.print(txMsgList[testReceivedMsg.command]);
             Serial.print(":");
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
@@ -275,7 +278,8 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           }
           else
           {
-            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            // Matching Rx and Tx commands have the same index
+            Serial.print(txMsgList[testReceivedMsg.command]);
             Serial.print(":");
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
@@ -290,7 +294,8 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           }
           else
           {
-            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            // Matching Rx and Tx commands have the same index
+            Serial.print(txMsgList[testReceivedMsg.command]);
             Serial.print(":");
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
@@ -304,7 +309,8 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           }
           else
           {
-            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            // Matching Rx and Tx commands have the same index
+            Serial.print(txMsgList[testReceivedMsg.command]);
             Serial.print(":");
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
@@ -318,7 +324,8 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
           }
           else
           {
-            Serial.print(txMsgList[testReceivedMsg.command]);   // Matching Rx and Tx commands have the same index
+            // Matching Rx and Tx commands have the same index
+            Serial.print(txMsgList[testReceivedMsg.command]);
             Serial.print(":");
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
@@ -551,16 +558,20 @@ void switchToState(int newState)
   switch(newState)
   {
     case STATE_IDLE:
+      // Initializations before beginning idle state
       currentState = STATE_IDLE;
       break;
       
     case STATE_COUNTDOWN:
+      // Initializations before beginning countdown state
       countdownSecsRemaining = countdownSecs;
       lastCountDownMillis = millis();
+      falseStartFlags = 0;
       currentState = STATE_COUNTDOWN;
       break;
       
     case STATE_RACING:
+      // Initializations before beginning racing state
       raceStartMillis = millis();
       for(int i=0; i < NUM_SENSORS; i++)
       {
@@ -699,8 +710,25 @@ void doStateCountdown()
   }
   else
   {
+    // Check for a false start.
+    if(falseStartFlags)
+    {
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        if(falseStartFlags & (1<<i))
+        {
+          strcpy(txStr0, "F:");
+          itoa(i, txStr1, 10);
+          strcat(txStr0, txStr1);
+          Serial.println(txStr0);
+          // deactivate the false start flag so the message doesn't keep printing
+        }
+      }
+      falseStartFlags = 0;
+    }
+
+    // Check if one second elapsed.
     if((systemTime - lastCountDownMillis) > 1000)
-    // One second elapsed.
     {
       countdownSecsRemaining--;
       lastCountDownMillis = systemTime;
@@ -873,27 +901,38 @@ ISR(PCINT2_vect)
 {
   unsigned int newRisingEdges;
 
-  if(currentState == STATE_RACING)
+  raceMillis = millis() - raceStartMillis;
+  // Register rising edge events
+  previousSensorValues = currentSensorValues;
+  currentSensorValues = PIND;
+  newRisingEdges = (previousSensorValues ^ currentSensorValues) & currentSensorValues;
+  switch(currentState)
   {
-    if(!inMockMode)
-    {
-      raceMillis = millis() - raceStartMillis;
-      // Register rising edge events
-      previousSensorValues = currentSensorValues;
-      currentSensorValues = PIND;
-      newRisingEdges = (previousSensorValues ^ currentSensorValues) & currentSensorValues;
+    case STATE_COUNTDOWN:
       for(int i=0; i < NUM_SENSORS; i++)
       {
         if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
         {
-          racerTicks[i]++;
-        }
-        if(racerTicks[i] >= raceLengthTicks)
-        {
-          racerFinishTimeMillis[i] = raceMillis;
+          falseStartFlags |= (1<<i);
         }
       }
-    }
+    break;
+    case STATE_RACING:
+      if(!inMockMode)
+      {
+        for(int i=0; i < NUM_SENSORS; i++)
+        {
+          if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
+          {
+            racerTicks[i]++;
+          }
+          if(racerTicks[i] >= raceLengthTicks)
+          {
+            racerFinishTimeMillis[i] = raceMillis;
+          }
+        }
+      }
+    break;
   }
 }
 
