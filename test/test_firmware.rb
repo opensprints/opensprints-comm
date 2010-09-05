@@ -40,9 +40,9 @@ stimulus_and_response = [
   ["!t:0\r\n","T:0\r\n"],
   ["!t:65535\r\n","T:65535\r\n"],
   ["!t:65536\r\n","T:NACK\r\n"],
-  ["!p\r\n","P:2.0\r\n"],
+  ["!p\r\n","P:1.02\r\n"],
   ["!p:023\r\n","NACK\r\n"],
-  ["!v\r\n","V:2.0\r\n"],
+  ["!v\r\n","V:1.02\r\n"],
   ["!v:555\r\n","NACK\r\n"]
 ]
 
