@@ -2,11 +2,9 @@ require 'rubygems'
 require 'bacon'
 require 'timeout'
 include Timeout
-#prime the serial port
-filename = ENV['OPENSPRINTS_PORT']||"/dev/ttyUSB0"
-serialport = File.open(filename, "w+")
-serialport.close
-sleep(1.5)
+# Prime the serial port
+# First time opening the device (port / file / tty) after plugging in the 
+# Arduino causes it to reboot.
 
 stimulus_and_response = [
   ["Test the handshake:",   "!a:0\r\n",     "A:0\r\n"],
