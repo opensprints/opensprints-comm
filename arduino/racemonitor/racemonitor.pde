@@ -859,14 +859,14 @@ void doStateRacing()
 void blinkLed()
 {
   const unsigned int statusBlinkInterval = 250;     // number of millis
-  static int lastStatusLEDValue = LOW;
+  static int lastStatusLEDValue = HIGH;
   static unsigned long previousStatusBlinkMillis = 0;
 
   switch(currentState)
   {
     case STATE_IDLE:
       // slow flashing
-      if (millis() - previousStatusBlinkMillis > statusBlinkInterval * 4)
+      if (millis() - previousStatusBlinkMillis > statusBlinkInterval / 4)
       {
         previousStatusBlinkMillis = millis();
         lastStatusLEDValue = !lastStatusLEDValue;
@@ -941,6 +941,7 @@ void setup()
 {
   Serial.begin(115200); 
   pinMode(PIN_STATUS_LED, OUTPUT);
+  digitalWrite(PIN_STATUS_LED, HIGH);
   for(int i=0; i < NUM_SENSORS; i++)
   {
     pinMode(racerGoLedPins[i], OUTPUT);
