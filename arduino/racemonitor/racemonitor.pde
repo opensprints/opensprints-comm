@@ -958,8 +958,6 @@ void defaultsInit()
   raceLengthTicks = 500;
   raceDurationSecs = 0;
   inMockMode = false;
-
-  switchToState(STATE_IDLE);
 }
 
 void setup()
@@ -982,6 +980,8 @@ void setup()
   PCMSK2 |= (1 << PCINT21);
 
   defaultsInit();
+
+  switchToState(STATE_IDLE);
 }
 
 void loop()
