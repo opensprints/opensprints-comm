@@ -566,7 +566,7 @@ void switchToState(int newState)
   switch(newState)
   {
     case STATE_IDLE:
-      // Initializations before beginning idle state
+      // No initializations before beginning idle state
       currentState = STATE_IDLE;
       break;
       
