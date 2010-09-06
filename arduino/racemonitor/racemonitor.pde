@@ -25,24 +25,24 @@ unsigned long racerFinishTimeMillis[NUM_SENSORS] = {0,0,0,0};
 unsigned int racerFinishedFlags = 0;
 #define ALL_RACERS_FINISHED_MASK  0x0F // binary 00001111
 
-unsigned char countdownSecs = 5;
 unsigned int countdownSecsRemaining;
 unsigned long lastCountDownMillis;
 int falseStartFlags; // Bit-wise representation: if bit is set, false start was
                      // detected.
 
-unsigned int raceLengthTicks = 500;
-unsigned int raceDurationSecs = 0;
-
-boolean inMockMode = false;
-
 unsigned long raceStartMillis;
 unsigned long raceMillis;
 unsigned int updateInterval = 250;   // milliseconds
 
+// User-customizable settings exposed by the API
+unsigned char countdownSecs;
+unsigned int raceLengthTicks;
+unsigned int raceDurationSecs;
+boolean inMockMode;
+
 //----- Communications ------
-#define MAX_LINE_CHARS      20
-#define MAX_COMMAND_CHARS   5
+#define MAX_LINE_CHARS      31
+#define MAX_COMMAND_CHARS   10
 #define MAX_PAYLOAD_CHARS   (MAX_LINE_CHARS - MAX_COMMAND_CHARS)
 
 char line[MAX_LINE_CHARS + 1];
@@ -61,6 +61,7 @@ enum
 {
   RX_MSG_A,     // Handshake
   RX_MSG_C,     // Countdown seconds
+  RX_MSG_DEFAULTS,     // reinitialize: idle state with default values loaded
   RX_MSG_G,     // Start race countdown, then race.
   RX_MSG_HW,    // request hw type and version
   RX_MSG_I,     // Flags for which sensors are active, 0 thru 31. (NOT YET IMPLEMENTED)
@@ -77,6 +78,7 @@ char * rxMsgList[NUM_RX_COMMANDS]=
 {
   "a",  // RX_MSG_A,
   "c",  // RX_MSG_C,
+  "defaults",  // RX_MSG_DEFAULTS,
   "g",  // RX_MSG_G,
   "hw", // RX_MSG_HW,
   "i",  // RX_MSG_I,
@@ -92,6 +94,7 @@ boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
 {
   true,     // RX_MSG_A,
   true,     // RX_MSG_C,
+  false,    // RX_MSG_DEFAULTS,
   false,    // RX_MSG_G,
   false,    // RX_MSG_HW,
   true,     // RX_MSG_I,
@@ -104,11 +107,12 @@ boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
 };
 
 // Indexing corresponds to Rx counterparts for messages
-// a through v.
+// A through V.
 enum
 {
   TX_MSG_A,
   TX_MSG_C,
+  TX_MSG_DEFAULTS,
   TX_MSG_G,
   TX_MSG_HW,
   TX_MSG_I,             // (NOT YET IMPLEMENTED)
@@ -138,6 +142,7 @@ char * txMsgList[NUM_TX_MSGS]=
 {
   "A",
   "C",
+  "DEFAULTS",
   "G",
   "HW",
   "I",
@@ -523,6 +528,9 @@ void txRespond(struct COMMAND_MSG rxMsg)
   {
     switch(rxMsg.command)
     {
+      // These commands have special handlings per state, 
+      // so the state handler manages the response.
+      case RX_MSG_DEFAULTS:
       case RX_MSG_G:
       case RX_MSG_M:
       case RX_MSG_S:
@@ -607,6 +615,11 @@ void doStateIdle()
         countdownSecs = atoi(receivedMsg.payloadStr);
         break;
 
+      case RX_MSG_DEFAULTS:
+        txRespond(receivedMsg);
+        defaultsInit();
+        break;
+
       case RX_MSG_G:
         // Either raceLengthTicks or raceDurationSecs needs to be zero
         // but not both.
@@ -680,6 +693,7 @@ void doStateCountdown()
     {
       // Respond with error to these. They are not valid in this state.
       case RX_MSG_C:
+      case RX_MSG_DEFAULTS:
       case RX_MSG_G:
       case RX_MSG_M:
       case RX_MSG_L:
@@ -937,6 +951,17 @@ ISR(PCINT2_vect)
 }
 
 //---------------------------
+
+void defaultsInit()
+{
+  countdownSecs = 5;
+  raceLengthTicks = 500;
+  raceDurationSecs = 0;
+  inMockMode = false;
+
+  switchToState(STATE_IDLE);
+}
+
 void setup()
 {
   Serial.begin(115200); 
@@ -956,7 +981,7 @@ void setup()
   PCMSK2 |= (1 << PCINT20);
   PCMSK2 |= (1 << PCINT21);
 
-  switchToState(STATE_IDLE);
+  defaultsInit();
 }
 
 void loop()
