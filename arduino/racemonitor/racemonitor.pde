@@ -639,7 +639,7 @@ void doStateIdle()
         //txRespond(receivedMsg);
 
         // @@@ for now, all 4 fixed inputs are active.
-        Serial.println("NACK\r\n");
+        txRespondError(receivedMsg);
         break;
 
       case RX_MSG_L:
