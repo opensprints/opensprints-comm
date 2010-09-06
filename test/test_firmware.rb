@@ -11,6 +11,9 @@ serialport = File.open(filename, "w+")
 serialport.close
 sleep(1.5)
 
+# First, get Racemonitor back to Idle State from any other state
+serialport.write "!s"
+
 stimulus_and_response = [
   ["Test the handshake:",   "!a:0\r\n",     "A:0\r\n"],
   ["Test the handshake:\n", "!a:12345\r\n", "A:12345\r\n"], 
