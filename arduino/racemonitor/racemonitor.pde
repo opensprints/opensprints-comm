@@ -508,7 +508,7 @@ boolean newMsgReceived()
 
 void txRespondError(struct COMMAND_MSG rxMsg)
 {
-  char txStr[20];
+  char txStr[MAX_LINE_CHARS];
   strcpy(txStr, txMsgList[rxMsg.command]);
   strcat(txStr, ":");
   strcat(txStr, "ERROR");
@@ -517,7 +517,7 @@ void txRespondError(struct COMMAND_MSG rxMsg)
   
 void txRespond(struct COMMAND_MSG rxMsg)
 {
-  char txStr[20];
+  char txStr[MAX_LINE_CHARS];
   strcpy(txStr, txMsgList[rxMsg.command]);
   if(rxMsg.hasPayload)
   {
@@ -598,7 +598,7 @@ void switchToState(int newState)
 
 void doStateIdle()
 {
-  char txStr[20];
+  char txStr[MAX_LINE_CHARS];
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
@@ -685,8 +685,8 @@ void doStateIdle()
 void doStateCountdown()
 {
   unsigned long systemTime = millis();
-  char txStr0[20];
-  char txStr1[20];
+  char txStr0[MAX_LINE_CHARS];
+  char txStr1[MAX_LINE_CHARS];
   if(newMsgReceived())
   {
     switch(receivedMsg.command)
