@@ -2,7 +2,10 @@ require 'rubygems'
 require 'bacon'
 require 'timeout'
 include Timeout
-#prime the serial port
+
+# Prime the serial port
+# First time opening the device (port / file / tty) after plugging in the 
+# Arduino causes it to reboot.
 filename = ENV['OPENSPRINTS_PORT']||"/dev/ttyUSB0"
 serialport = File.open(filename, "w+")
 serialport.close
