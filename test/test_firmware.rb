@@ -120,6 +120,7 @@ def write_command(command)
   @serialport.write command
   @serialport.close
   @serialport = File.open(filename, "w+")
+  puts command
 end
 
 describe "countdown" do
@@ -134,7 +135,7 @@ describe "countdown" do
   end
 
   it "should count down to zero, defaulting to 4" do
-    @serialport.flush
+#@serialport.flush
     write_command("!g\r\n") 
     timeout(0.1) {
       @serialport.readline.should == "G\r\n"
@@ -144,7 +145,8 @@ describe "countdown" do
       6.times do
         result += @serialport.readline
       end
-      result.should.include("CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n")
+      #result.should.include("CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n")
+      result.should == "CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n"
     end
   end
 end
