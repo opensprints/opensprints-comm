@@ -41,11 +41,6 @@ timeout(0.2) {
 
 
 idle_stimulus_and_response = [
-  ["Test a handshake boundary case\n",  "!a:65536\r\n", "A:NACK\r\n"], 
-  ["Test the handshake:",   "!a:0\r\n",     "A:0\r\n"],
-  ["Test the handshake:\n", "!a:12345\r\n", "A:12345\r\n"], 
-  ["Test the handshake:\n", "!a:65535\r\n", "A:65535\r\n"], 
-  ["Test a handshake boundary case\n",  "!a:65536\r\n", "A:NACK\r\n"], 
   ["Test a countdown boundary case:\n", "!c:-1\r\n",    "NACK\r\n"], 
   ["Test a countdown valid case:\n",    "!c:0\r\n",     "C:0\r\n"], 
   ["Test a countdown valid case:\n",    "!c:1\r\n",     "C:1\r\n"], 
@@ -83,7 +78,6 @@ idle_stimulus_and_response = [
   ["Test the Go command with a malformed message:\n",   "!g:$!&#\r\n","NACK\r\n"],
 ]
 
-
 idle_stimulus_and_response.each do |descr,stimulus,expected_response|
 
 	describe descr do
@@ -120,22 +114,23 @@ def write_command(command)
   @serialport.write command
   @serialport.close
   @serialport = File.open(filename, "w+")
-  puts command
+end
+
+def set_to_defaults!
+  write_command("!defaults\r\n")
+
+  timeout(1.1) {
+    @serialport.readline
+  }
 end
 
 describe "countdown" do
   before do
-    write_command("!defaults\r\n")
-
-    timeout(1.1) {
-      puts @serialport.readline
-    }
-  end
-  after do
+    set_to_defaults!
   end
 
   it "should count down to zero, defaulting to 4" do
-#@serialport.flush
+    #@serialport.flush
     write_command("!g\r\n") 
     timeout(0.1) {
       @serialport.readline.should == "G\r\n"
@@ -145,9 +140,38 @@ describe "countdown" do
       6.times do
         result += @serialport.readline
       end
-      #result.should.include("CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n")
-      result.should == "CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n"
+      #result.should == "CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n"
+      result.should.include("CD:4\r\nCD:3\r\nCD:2\r\nCD:1\r\nCD:0\r\n")
+    end
+  end
+
+end
+
+def write_stimulus(stimulus)
+  write_command(stimulus)
+  timeout(0.1) {
+    return @serialport.readline
+  }
+end
+
+describe "The handshake" do
+  before do
+    set_to_defaults!
+  end
+  describe "with a number 0-65535" do
+    it "should reply with the given number" do
+      write_stimulus("!a:0\r\n").should==("A:0\r\n")
+      write_stimulus("!a:12345\r\n").should==("A:12345\r\n")
+      write_stimulus("!a:65535\r\n").should==("A:65535\r\n") 
+    end
+  end
+
+  describe "with numbers greater than 65535" do
+    it "should NACK back" do
+			write_command("!a:65536\r\n")
+			timeout(0.1) {
+				@serialport.readline.should==("A:NACK\r\n")
+			}
     end
   end
 end
-
