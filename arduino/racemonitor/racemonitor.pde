@@ -32,8 +32,10 @@ unsigned long lastCountDownMillis;
 int falseStartFlags; // Bit-wise representation: if bit is set, false start was
                      // detected.
 
+#define REACTION_TICKS  2
 int reactionSentFlags; // Bit-wise representation: if bit is set, reaction time
                        // was sent.
+unsigned long racerReactionMillis[NUM_SENSORS] = {0,0,0,0};
 
 unsigned long raceStartMillis;
 unsigned long raceMillis;
@@ -592,9 +594,11 @@ void switchToState(int newState)
     case STATE_RACING:
       // Initializations before beginning racing state
       raceStartMillis = millis();
+      reactionSentFlags = 0;
       for(int i=0; i < NUM_SENSORS; i++)
       {
         digitalWrite(racerGoLedPins[i],HIGH);
+        racerReactionMillis[i]=0;
       }
       currentState = STATE_RACING;
       break;
@@ -774,7 +778,7 @@ void doStateRacing()
 {
   unsigned long systemTime = millis();
   static unsigned long lastUpdateMillis = 0;
-  char txStr0[80];
+  char txStr0[100];
   char txStr1[10];
 
   // Watch for each racer to reach racelength ticks
@@ -814,6 +818,7 @@ void doStateRacing()
     strcat(txStr0, "t: ");
     ltoa(raceMillis, txStr1, 10);
     strcat(txStr0, txStr1);
+    strcat(txStr0, "\r\n");
     for(int i=0; i < NUM_SENSORS; i++)
     {
       if(!(racerFinishedFlags & (1<<i)))
@@ -821,15 +826,34 @@ void doStateRacing()
       {
         if(racerFinishTimeMillis[i] != 0)
         {
-          strcat(txStr0, "\r\n");
           itoa(i, txStr1, 10);
           strcat(txStr0, txStr1);
           strcat(txStr0, "f: ");
           itoa(racerFinishTimeMillis[i], txStr1, 10);
           strcat(txStr0, txStr1);
+          strcat(txStr0, "\r\n");
 
           digitalWrite(racerGoLedPins[i],LOW);
           racerFinishedFlags |= (1<<i);
+        }
+      }
+      if(racerReactionMillis[i] != 0)
+      {
+        if(!(reactionSentFlags & (1<<i)) && !(falseStartFlags & (1<<i)))
+        {
+          // racer just reached REACTION_TICKS
+          // and did not false start
+          // so print out reaction time
+          strcat(txStr0, "RT:");   // prefix of new message line
+          itoa(i, txStr1, 10);     // number of racer in ascii
+          strcat(txStr0, txStr1);
+          strcat(txStr0, ":");
+          itoa(racerReactionMillis[i], txStr1, 10);
+          strcat(txStr0, txStr1);
+          strcat(txStr0, "\r\n");
+
+          // set a flag to prevent the message from being sent again.
+          reactionSentFlags |= (1<<i);
         }
       }
     }
@@ -932,10 +956,14 @@ ISR(PCINT2_vect)
     if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
     {
       racerTicks[i]++;
-    }
-    if(racerTicks[i] >= raceLengthTicks)
-    {
-      racerFinishTimeMillis[i] = raceMillis;
+      if(racerTicks[i] == raceLengthTicks)
+      {
+        racerFinishTimeMillis[i] = raceMillis;
+      }
+      if(racerTicks[i] == REACTION_TICKS)
+      {
+        racerReactionMillis[i] = raceMillis;
+      }
     }
   }
 }
