@@ -30,6 +30,9 @@ unsigned long lastCountDownMillis;
 int falseStartFlags; // Bit-wise representation: if bit is set, false start was
                      // detected.
 
+int reactionSentFlags; // Bit-wise representation: if bit is set, reaction time
+                       // was sent.
+
 unsigned long raceStartMillis;
 unsigned long raceMillis;
 unsigned int updateInterval = 250;   // milliseconds
