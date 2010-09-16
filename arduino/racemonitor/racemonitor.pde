@@ -25,6 +25,8 @@ unsigned long racerFinishTimeMillis[NUM_SENSORS] = {0,0,0,0};
 unsigned int racerFinishedFlags = 0;
 #define ALL_RACERS_FINISHED_MASK  0x0F // binary 00001111
 
+// False start triggers on the second tick detected during countdown.
+#define FALSE_START_TICKS   2
 unsigned int countdownSecsRemaining;
 unsigned long lastCountDownMillis;
 int falseStartFlags; // Bit-wise representation: if bit is set, false start was
@@ -575,6 +577,12 @@ void switchToState(int newState)
       
     case STATE_COUNTDOWN:
       // Initializations before beginning countdown state
+      for(int i=0; i < NUM_SENSORS; i++)
+      {
+        racerFinishedFlags = 0;
+        racerFinishTimeMillis[i] = 0;
+        racerTicks[i] = 0;
+      }
       countdownSecsRemaining = countdownSecs;
       lastCountDownMillis = millis();
       falseStartFlags = 0;
@@ -586,9 +594,6 @@ void switchToState(int newState)
       raceStartMillis = millis();
       for(int i=0; i < NUM_SENSORS; i++)
       {
-        racerFinishedFlags = 0;
-        racerTicks[i] = 0;
-        racerFinishTimeMillis[i] = 0;
         digitalWrite(racerGoLedPins[i],HIGH);
       }
       currentState = STATE_RACING;
@@ -728,20 +733,21 @@ void doStateCountdown()
   else
   {
     // Check for a false start.
-    if(falseStartFlags)
+    for(int i=0; i < NUM_SENSORS; i++)
     {
-      for(int i=0; i < NUM_SENSORS; i++)
+      if(racerTicks[i] >= FALSE_START_TICKS)
       {
-        if(falseStartFlags & (1<<i))
+        // Only deal with racers that have not already false-started
+        if(!(falseStartFlags & (1<<i)))
         {
           strcpy(txStr0, "F:");
           itoa(i, txStr1, 10);
           strcat(txStr0, txStr1);
           Serial.println(txStr0);
-          // deactivate the false start flag so the message doesn't keep printing
+          // activate the false start flag so the message doesn't keep printing
+          falseStartFlags |= (1<<i);
         }
       }
-      falseStartFlags = 0;
     }
 
     // Check if one second elapsed.
@@ -761,8 +767,6 @@ void doStateCountdown()
       // When countdown hits zero, start race
       switchToState(STATE_RACING);
     }
-    
-    // @@@ TODO: Announce any false starts.
   }
 }
 
@@ -923,33 +927,16 @@ ISR(PCINT2_vect)
   previousSensorValues = currentSensorValues;
   currentSensorValues = PIND;
   newRisingEdges = (previousSensorValues ^ currentSensorValues) & currentSensorValues;
-  switch(currentState)
+  for(int i=0; i < NUM_SENSORS; i++)
   {
-    case STATE_COUNTDOWN:
-      for(int i=0; i < NUM_SENSORS; i++)
-      {
-        if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
-        {
-          falseStartFlags |= (1<<i);
-        }
-      }
-    break;
-    case STATE_RACING:
-      if(!inMockMode)
-      {
-        for(int i=0; i < NUM_SENSORS; i++)
-        {
-          if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
-          {
-            racerTicks[i]++;
-          }
-          if(racerTicks[i] >= raceLengthTicks)
-          {
-            racerFinishTimeMillis[i] = raceMillis;
-          }
-        }
-      }
-    break;
+    if(newRisingEdges & (1<<sensorPortDPinsAvr[i]))
+    {
+      racerTicks[i]++;
+    }
+    if(racerTicks[i] >= raceLengthTicks)
+    {
+      racerFinishTimeMillis[i] = raceMillis;
+    }
   }
 }
 
