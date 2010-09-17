@@ -911,7 +911,7 @@ void blinkLed()
   {
     case STATE_IDLE:
       // slow flashing
-      if (millis() - previousStatusBlinkMillis > statusBlinkInterval / 4)
+      if (millis() - previousStatusBlinkMillis > statusBlinkInterval * 4)
       {
         previousStatusBlinkMillis = millis();
         lastStatusLEDValue = !lastStatusLEDValue;
