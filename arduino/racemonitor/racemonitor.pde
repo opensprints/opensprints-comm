@@ -811,7 +811,7 @@ void doStateRacing()
       itoa(i, txStr1, 10);
       strcat(txStr0, txStr1);
       strcat(txStr0, ": ");
-      itoa(racerTicks[i], txStr1, 10);
+      ltoa(racerTicks[i], txStr1, 10);
       strcat(txStr0, txStr1);
       strcat(txStr0, "\r\n");
     }
@@ -829,7 +829,7 @@ void doStateRacing()
           itoa(i, txStr1, 10);
           strcat(txStr0, txStr1);
           strcat(txStr0, "f: ");
-          itoa(racerFinishTimeMillis[i], txStr1, 10);
+          ltoa(racerFinishTimeMillis[i], txStr1, 10);
           strcat(txStr0, txStr1);
           strcat(txStr0, "\r\n");
 
@@ -848,7 +848,7 @@ void doStateRacing()
           itoa(i, txStr1, 10);     // number of racer in ascii
           strcat(txStr0, txStr1);
           strcat(txStr0, ":");
-          itoa(racerReactionMillis[i], txStr1, 10);
+          ltoa(racerReactionMillis[i], txStr1, 10);
           strcat(txStr0, txStr1);
           strcat(txStr0, "\r\n");
 
