@@ -45,8 +45,8 @@ unsigned int updateInterval = 250;   // milliseconds
 
 // User-customizable settings exposed by the API
 unsigned char countdownSecs;
-unsigned int raceLengthTicks;
-unsigned int raceDurationSecs;
+unsigned long raceLengthTicks;
+unsigned long raceDurationSecs;
 boolean inMockMode;
 
 //----- Communications ------
@@ -554,7 +554,7 @@ void txRespond(struct COMMAND_MSG rxMsg)
         
       case RX_MSG_GETLEN:
         strcat(txStr, ":");
-        itoa(raceLengthTicks, txStrPayload, 10);
+        ltoa(raceLengthTicks, txStrPayload, 10);
         strcat(txStr, txStrPayload);
         break;
         
