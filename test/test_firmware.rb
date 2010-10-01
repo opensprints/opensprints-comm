@@ -175,3 +175,26 @@ describe "The handshake" do
     end
   end
 end
+
+describe "Get default race length" do
+  before do
+    set_to_defaults!
+  end
+  describe "After resetting parameters to default values, raceLengthTicks " do
+    it "should be 500" do
+      write_stimulus("!getlen\r\n").should==("L:500\r\n")
+    end
+  end
+end
+
+describe "Get changed race length" do
+  before do
+    set_to_defaults!
+    write_stimulus("!l:400\r\n")
+  end
+  describe "After changing value raceLengthTicks of raceLengthTicks to 444, " do
+    it "getlen should respond with 444" do
+      write_stimulus("!getlen\r\n").should==("L:500\r\n")
+    end
+  end
+end
