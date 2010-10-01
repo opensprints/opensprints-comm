@@ -14,7 +14,7 @@ serialport = MockFirmware.open(filename, "w+")
 serialport.write "!s\r\n"
 serialport.flush
 timeout(0.2) {
-	puts serialport.readline
+	serialport.readline
 }
 
 serialport.close
@@ -24,7 +24,7 @@ serialport = MockFirmware.open(filename, "w+")
 serialport.write "!defaults\r\n"
 serialport.flush
 timeout(0.2) {
-	puts serialport.readline
+	serialport.readline
 }
 serialport.close
 
@@ -65,10 +65,81 @@ describe "The handshake" do
 
   describe "with numbers greater than 65535" do
     it "should NACK back" do
-			write_command("!a:65536\r\n")
-			timeout(0.1) {
-				@serialport.readline.should==("A:NACK\r\n")
-			}
+			write_stimulus("!a:65536\r\n").should==("A:NACK\r\n")
     end
+  end
+end
+
+describe "The race length command" do
+  describe "with a malformed message" do
+    it "should NACK back" do
+			write_stimulus("!l\r\n").should==("NACK\r\n")
+    end
+  end
+
+  describe "with a number between 0 and 65535" do
+    it "should ACK with the given number" do
+      write_stimulus("!l:0\r\n").should==("L:0\r\n")
+      write_stimulus("!l:65535\r\n").should==("L:65535\r\n")
+    end
+  end
+
+  describe "with a number greater than 65535" do
+    it "should NACK back" do
+      write_stimulus("!l:65536\r\n").should==("L:NACK\r\n")
+    end
+  end
+
+end
+
+describe "The time command" do
+  describe "with a malformed message" do
+    it "should NACK back" do
+      write_stimulus("!t\r\n").should==("NACK\r\n")
+    end
+  end
+
+  describe "with a number between 0 and 65535" do
+    it "should ACK with the given number" do
+      write_stimulus("!t:0\r\n").should==("T:0\r\n")
+      write_stimulus("!t:65535\r\n").should==("T:65535\r\n")
+    end
+  end
+
+  describe "with a number greater than 65535" do
+    it "should NACK back" do
+      write_stimulus("!t:65536\r\n").should==("T:NACK\r\n")
+    end
+  end
+end
+
+describe "Setting the countdown length" do
+  describe "with a number greater than 65535 or less than 0" do
+    it "should NACK back" do
+      write_stimulus("!c:-1\r\n").should==("NACK\r\n")
+      write_stimulus("!c:256\r\n").should==("C:NACK\r\n")
+    end
+  end
+
+  describe "with a number between 0 and 65535" do
+    it "should ACK with the given number" do
+      write_stimulus("!c:0\r\n").should==("C:0\r\n")
+      write_stimulus("!c:1\r\n").should==("C:1\r\n")
+      write_stimulus("!c:127\r\n").should==("C:127\r\n")
+      write_stimulus("!c:128\r\n").should==("C:128\r\n")
+      write_stimulus("!c:255\r\n").should==("C:255\r\n")
+    end
+  end
+end
+
+describe "The go command" do
+  it "should NACK with a malformed message" do
+    write_stimulus("!g:\r\n").should==("NACK\r\n")
+    write_stimulus("!g:1098\r\n").should==("NACK\r\n")
+    write_stimulus("!g:$!&#\r\n").should==("NACK\r\n")
+  end
+
+  it "should ACK with a well formed message" do
+    write_stimulus("!g\r\n").should==("G\r\n")
   end
 end
