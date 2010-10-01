@@ -532,6 +532,8 @@ void txRespondError(struct COMMAND_MSG rxMsg)
 void txRespond(struct COMMAND_MSG rxMsg)
 {
   char txStr[MAX_LINE_CHARS];
+  char txStrPayload[MAX_LINE_CHARS];
+
   strcpy(txStr, txMsgList[rxMsg.command]);
   if(rxMsg.hasPayload)
   {
@@ -548,6 +550,12 @@ void txRespond(struct COMMAND_MSG rxMsg)
       case RX_MSG_G:
       case RX_MSG_M:
       case RX_MSG_S:
+        break;
+        
+      case RX_MSG_GETLEN:
+        strcat(txStr, ":");
+        itoa(raceLengthTicks, txStrPayload, 10);
+        strcat(txStr, txStrPayload);
         break;
         
       case RX_MSG_HW:
@@ -724,6 +732,7 @@ void doStateCountdown()
 
       // Respond to handshake or info requests.
       case RX_MSG_A:
+      case RX_MSG_GETLEN:
       case RX_MSG_HW:
       case RX_MSG_P:
       case RX_MSG_V:
@@ -888,6 +897,7 @@ void doStateRacing()
 
       // Respond to handshake or info requests.
       case RX_MSG_A:
+      case RX_MSG_GETLEN:
       case RX_MSG_HW:
       case RX_MSG_P:
       case RX_MSG_V:
