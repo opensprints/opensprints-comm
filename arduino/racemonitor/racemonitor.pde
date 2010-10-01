@@ -12,9 +12,11 @@ const char str_hw_version[] = "3";          // Arduino with ATMega328p
 #define PIN_STATUS_LED 13
 
 #define NUM_SENSORS 4
-const int racerGoLedPins[NUM_SENSORS] = {9,10,11,12};     // Arduino digital IOs
-const int sensorPinsArduino[NUM_SENSORS] = {2,3,4,5};     // Arduino digital IOs
-const int sensorPortDPinsAvr[NUM_SENSORS] = {2,3,4,5};    // Arduino digital IOs
+
+// Arduino digital IOs
+const int racerGoLedPins[NUM_SENSORS] = {9,10,11,12};
+const int sensorPinsArduino[NUM_SENSORS] = {2,3,4,5};
+const int sensorPortDPinsAvr[NUM_SENSORS] = {2,3,4,5};
 
 int previousSensorValues;
 int currentSensorValues;
@@ -70,6 +72,7 @@ enum
   RX_MSG_C,     // Countdown seconds
   RX_MSG_DEFAULTS,     // reinitialize: idle state with default values loaded
   RX_MSG_G,     // Start race countdown, then race.
+  RX_MSG_GETLEN,  // Request the raceLengthTicks current setting
   RX_MSG_HW,    // request hw type and version
   RX_MSG_I,     // Flags for which sensors are active, 0 thru 31. (NOT YET IMPLEMENTED)
   RX_MSG_L,     // Number of ticks in a distance race
@@ -87,6 +90,7 @@ char * rxMsgList[NUM_RX_COMMANDS]=
   "c",  // RX_MSG_C,
   "defaults",  // RX_MSG_DEFAULTS,
   "g",  // RX_MSG_G,
+  "getlen", // RX_MSG_GETLEN,
   "hw", // RX_MSG_HW,
   "i",  // RX_MSG_I,
   "l",  // RX_MSG_L,
@@ -103,6 +107,7 @@ boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
   true,     // RX_MSG_C,
   false,    // RX_MSG_DEFAULTS,
   false,    // RX_MSG_G,
+  false,    // RX_MSG_GETLEN,
   false,    // RX_MSG_HW,
   true,     // RX_MSG_I,
   true,     // RX_MSG_L,
@@ -121,6 +126,7 @@ enum
   TX_MSG_C,
   TX_MSG_DEFAULTS,
   TX_MSG_G,
+  TX_MSG_GETLEN,
   TX_MSG_HW,
   TX_MSG_I,             // (NOT YET IMPLEMENTED)
   TX_MSG_L,
@@ -151,6 +157,7 @@ char * txMsgList[NUM_TX_MSGS]=
   "C",
   "DEFAULTS",
   "G",
+  "L",
   "HW",
   "I",
   "L",
@@ -313,7 +320,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
-          
+
         case RX_MSG_L:
           if(x >= 0 && x <= 65535)
           {
@@ -328,7 +335,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
-          
+
         case RX_MSG_T:
           if(x >= 0 && x <= 65535)
           {
@@ -616,6 +623,7 @@ void doStateIdle()
     switch(receivedMsg.command)
     {
       case RX_MSG_A:
+      case RX_MSG_GETLEN:
       case RX_MSG_HW:
       case RX_MSG_P:
       case RX_MSG_V:
