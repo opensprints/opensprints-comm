@@ -5,9 +5,9 @@
 // * add a command to request an update of race progress.
 // * add a command to set frequency of race progress updates.
 
-const char str_comm_protocol[] = "1.02";    // Some features are not yet completed
-const char str_fw_version[] = "1.02";
-const char str_hw_version[] = "3";          // Arduino with ATMega328p
+const char str_comm_protocol[] = "2.0.";    // Some features are not yet completed
+const char str_fw_version[] = "2.0.00";
+const char str_hw_version[] = "?";          // Arduino with ATMega328p
 
 #define PIN_STATUS_LED 13
 
@@ -127,7 +127,7 @@ enum
   TX_MSG_DEFAULTS,
   TX_MSG_G,
   TX_MSG_GETLEN,
-  TX_MSG_HW,
+  TX_MSG_HW,            // (NOT YET IMPLEMENTED)
   TX_MSG_I,             // (NOT YET IMPLEMENTED)
   TX_MSG_L,
   TX_MSG_M,
@@ -887,6 +887,7 @@ void doStateRacing()
     {
       // Respond with error to these. They are not valid in this state.
       case RX_MSG_C:
+      case RX_MSG_DEFAULTS:
       case RX_MSG_G:
       case RX_MSG_M:
       case RX_MSG_L:
