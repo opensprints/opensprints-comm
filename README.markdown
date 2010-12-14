@@ -117,9 +117,9 @@ Set the number of seconds in a fixed time duration race. *This needs to be imple
 
 #### Example command and reply messages
 A 20 minute race:
-!t:72000
+    !t:72000
 The reply to the *set race seconds command* example above is:
-T:72000
+    T:72000
 
 ### Get firmware release
 #### Get firmware release command
