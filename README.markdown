@@ -80,9 +80,9 @@ and no other action is taken.
 Stores the number of countdown seconds. The number of countdown seconds is fixed until the Arduino power is cycled or the value is changed by another *set countdown seconds command*.
 
 #### Example command and reply messages
-!c:10
+    !c:10
 The reply to the *set countdown seconds command* example above is:
-C:10
+    C:10
 
 ### Set race ticks
 #### Set race ticks command
@@ -108,9 +108,9 @@ and no other action is taken.
 Stores the number of race ticks. The number of race ticks is fixed until the Arduino power is cycled or the value is changed by another *set race ticks command*.
 
 #### Example command and reply messages
-!l:1000
+    !l:1000
 The reply to the *set race ticks command* example above is:
-L:1000
+    L:1000
 
 ### Set race seconds (NOT YET IMPLEMENTED)
 Set the number of seconds in a fixed time duration race. *This needs to be implemented to store a 32-bit value.*
