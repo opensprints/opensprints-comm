@@ -583,17 +583,42 @@ void txRespond(struct COMMAND_MSG rxMsg)
 
 //---------------------------
 
+void ClearAllRacerReactionMillis()
+{
+  for(int i=0; i < NUM_SENSORS; i++)
+  {
+    racerReactionMillis[i]=0;
+  }
+}
+
+void SetAllGoLedsRed()
+{
+  for(int i=0; i < NUM_SENSORS; i++)
+  {
+    digitalWrite(racerGoLedPins[i],LOW);
+  }
+}
+
+void SetAllGoLedsGreen()
+{
+  for(int i=0; i < NUM_SENSORS; i++)
+  {
+    digitalWrite(racerGoLedPins[i],HIGH);
+  }
+}
+
 void switchToState(int newState)
 {
   switch(newState)
   {
     case STATE_IDLE:
-      // No initializations before beginning idle state
+      SetAllGoLedsRed();
       currentState = STATE_IDLE;
       break;
       
     case STATE_COUNTDOWN:
       // Initializations before beginning countdown state
+      SetAllGoLedsRed();
       for(int i=0; i < NUM_SENSORS; i++)
       {
         racerFinishedFlags = 0;
@@ -610,11 +635,9 @@ void switchToState(int newState)
       // Initializations before beginning racing state
       raceStartMillis = millis();
       reactionSentFlags = 0;
-      for(int i=0; i < NUM_SENSORS; i++)
-      {
-        digitalWrite(racerGoLedPins[i],HIGH);
-        racerReactionMillis[i]=0;
-      }
+      ClearAllRacerReactionMillis();
+
+      SetAllGoLedsGreen();
       currentState = STATE_RACING;
       break;
       
@@ -798,15 +821,9 @@ void doStateRacing()
   char txStr0[100];
   char txStr1[10];
 
-  // Watch for each racer to reach racelength ticks
-    // kill race when all racers arrive at the destination
-    // Report final time for each racer upon reaching the destination
-    //currentState=STATE_IDLE;
-
-  // @@@ TODO: Or instead, Watch for race timer to expire 
+  // @@@ TODO: Watch for race timer to expire 
     // kill race when time expires
     // Report final distance for each racer
-    //currentState=STATE_IDLE;
 
   raceMillis = systemTime - raceStartMillis;
   if(raceMillis - lastUpdateMillis > updateInterval)
