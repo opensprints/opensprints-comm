@@ -282,8 +282,10 @@ Either the race distance must be set to 0 or the race ticks must be set to 0. Bo
 The original Arduino protocol was supported by the Arduino firmware releases prior to Release 2.0. The syntax and behavior is much different than that of subsequent releases.
 
 # Firmware Changes
-## Release 2.0.00
+## Release 2.0.01
+* Fixes Red Light Green Light Bugs
 
+## Release 2.0.00
 * Supports Protocol Version 2.0.
 
 ## Original Release

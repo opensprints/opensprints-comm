@@ -6,7 +6,7 @@
 // * add a command to set frequency of race progress updates.
 
 const char str_comm_protocol[] = "2.0.";    // Some features are not yet completed
-const char str_fw_version[] = "2.0.00";
+const char str_fw_version[] = "2.0.01";
 const char str_hw_version[] = "?";          // Arduino with ATMega328p
 
 #define PIN_STATUS_LED 13
