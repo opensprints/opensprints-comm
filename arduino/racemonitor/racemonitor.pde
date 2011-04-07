@@ -41,7 +41,7 @@ unsigned long racerReactionMillis[NUM_SENSORS] = {0,0,0,0};
 
 unsigned long raceStartMillis;
 unsigned long raceMillis;
-unsigned int updateInterval = 250;   // milliseconds
+unsigned int updateInterval = 50;   // milliseconds
 
 // User-customizable settings exposed by the API
 unsigned char countdownSecs;
