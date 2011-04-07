@@ -179,17 +179,19 @@ This command is only valid during countdown and during an ongoing race. In idle 
 In mock mode, the fake ticks are generated and outputted in the progress messages during a race.
 
 Command message:
+
 * toggle mock mode on:
       !m:ON
 * toggle mock mode off:
       !m:OFF
 
 The expected response from the Arduino is an immediate reply with the line
+
 * if mock mode was off is toggled on:
       M:ON
 * if mock mode was is toggled off.
       M:OFF
-* or if junk was received after the `:`:
+* or if junk was received after the `:`
       M:VALUE ERROR
 
 This command is only valid during an ongoing race. In racing and countdown states, this command will cause the response
