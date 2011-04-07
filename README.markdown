@@ -177,16 +177,21 @@ This command is only valid during countdown and during an ongoing race. In idle 
 
 ### Toggle mock mode
 In mock mode, the fake ticks are generated and outputted in the progress messages during a race.
-  
+
 Command message:
-    !m
+* toggle mock mode on:
+      !m:ON
+* toggle mock mode off:
+      !m:OFF
+
 The expected response from the Arduino is an immediate reply with the line
-    M:ON
-If mock mode was off is toggled on.  
-or
-    M:OFF
-If mock mode was is toggled off.  
-  
+* if mock mode was off is toggled on:
+      M:ON
+* if mock mode was is toggled off.
+      M:OFF
+* or if junk was received after the `:`:
+      M:VALUE ERROR
+
 This command is only valid during an ongoing race. In racing and countdown states, this command will cause the response
     M:ERROR
 
@@ -282,6 +287,13 @@ Either the race distance must be set to 0 or the race ticks must be set to 0. Bo
 The original Arduino protocol was supported by the Arduino firmware releases prior to Release 2.0. The syntax and behavior is much different than that of subsequent releases.
 
 # Firmware Changes
+## Release 2.0.02
+* tx message interval is 50 ms instead of 250 ms.
+* now set mock mode with the message
+      !m:ON
+* and unset mock moe with the message
+      !m:OFF
+
 ## Release 2.0.01
 * Fixes Red Light Green Light Bugs
 
