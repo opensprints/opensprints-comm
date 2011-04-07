@@ -76,7 +76,7 @@ enum
   RX_MSG_HW,    // request hw type and version
   RX_MSG_I,     // Flags for which sensors are active, 0 thru 31. (NOT YET IMPLEMENTED)
   RX_MSG_L,     // Number of ticks in a distance race
-  RX_MSG_M,     // Toggle "mock mode" (fake race outputs)
+  RX_MSG_M,     // Set or reset "mock mode" (fake race outputs)
   RX_MSG_S,     // Kill ongoing race
   RX_MSG_T,     // Number of seconds in a fixed-time race (NOT YET IMPLEMENTED)
   RX_MSG_P,     // Request protocol version
@@ -111,7 +111,7 @@ boolean rxMsgExpectsPayload[NUM_RX_COMMANDS]=
   false,    // RX_MSG_HW,
   true,     // RX_MSG_I,
   true,     // RX_MSG_L,
-  false,    // RX_MSG_M,
+  true,    // RX_MSG_M,
   false,    // RX_MSG_S,
   true,     // RX_MSG_T,
   false,    // RX_MSG_P,
@@ -334,6 +334,11 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             Serial.println(txMsgList[TX_MSG_NACK]);
             return(false);
           }
+          break;
+
+        case RX_MSG_M:
+            // Not expecting an integer payload, so just move along.
+            return(true);
           break;
 
         case RX_MSG_T:
@@ -703,15 +708,19 @@ void doStateIdle()
         // Toggle mock mode.
         strcpy(txStr, txMsgList[receivedMsg.command]);
         strcat(txStr, ":");
-        if(!inMockMode)
+        if(strncmp(receivedMsg.payloadStr, "ON", 4) == 0)
         {
           strcat(txStr, "ON");
           inMockMode = true;
         }
-        else
+        else if(strncmp(receivedMsg.payloadStr, "OFF", 4) == 0)
         {
           strcat(txStr, "OFF");
           inMockMode = false;
+        }
+        else
+        {
+          strcat(txStr, "VALUE ERROR");
         }
         Serial.println(txStr);
         break;
@@ -894,7 +903,7 @@ void doStateRacing()
     Serial.println(txStr0);
   }
   if(racerFinishedFlags == ALL_RACERS_FINISHED_MASK)
-  {
+    {
     switchToState(STATE_IDLE);
     return;
   }
