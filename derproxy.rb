@@ -14,6 +14,9 @@ sock.write "!v\n"
 #puts sock.gets("\r\n")
 #puts sock.readline("\r\n")
 puts sock.recv(9)
+#while line = sock.gets # Read lines from socket
+#  puts line         # and print them
+#end
 sock.close
 
 sleep(1)
