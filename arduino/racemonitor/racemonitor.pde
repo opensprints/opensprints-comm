@@ -6,7 +6,7 @@
 // * add a command to set frequency of race progress updates.
 
 const char str_comm_protocol[] = "2.0.";    // Some features are not yet completed
-const char str_fw_version[] = "2.0.02";
+const char str_fw_version[] = "2.0.03rc1";
 const char str_hw_version[] = "?";          // Arduino with ATMega328p
 
 #define PIN_STATUS_LED 13
@@ -57,6 +57,7 @@ boolean inMockMode;
 char line[MAX_LINE_CHARS + 1];
 
 #define CHAR_MSG_INITIAL        '!'
+#define CHAR_MSG_FINAL          '|'
 #define CHAR_PAYLOAD_SEPARATOR  ':'
 
 struct COMMAND_MSG
@@ -192,7 +193,7 @@ enum STATE
 //---------------------------
 // Serial Rx functions
 
-boolean lineAvailable(int max_line,char *line)
+boolean lineAvailable(int max_line, char *line)
 {
   int c;
   static int line_idx = 0;
@@ -210,7 +211,7 @@ boolean lineAvailable(int max_line,char *line)
       c = Serial.read();
       if (c != -1)  // got a char -- should always be true
       {
-        if (c == '\r' || c == '\n')
+        if (c == '\r' || c == '\n' || c == CHAR_MSG_FINAL)
           eol = true;
         else
         {
