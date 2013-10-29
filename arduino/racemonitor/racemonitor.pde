@@ -304,7 +304,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
-          
+
         case RX_MSG_I:
           // greater than zero and 32 bits or less.
           if(x > 0 && x <= 0xFFFFFFFF)
@@ -355,7 +355,7 @@ boolean isReceivedMsgValid(struct COMMAND_MSG testReceivedMsg)
             return(false);
           }
           break;
-          
+
         default:
           Serial.println("FART!!!");
           return(false);
@@ -409,7 +409,7 @@ boolean newMsgReceived()
       // Extract the ID of the command in the message.
       while(isAlphaNum(line[lineIdx]))
       {
-        if(linePartIdx <= MAX_COMMAND_CHARS) 
+        if(linePartIdx <= MAX_COMMAND_CHARS)
         {
           tempCommandString[linePartIdx]=line[lineIdx];
           lineIdx++;
@@ -511,7 +511,7 @@ boolean newMsgReceived()
         }
         if(++i == NUM_RX_COMMANDS)
         {
-          // No message matches. 
+          // No message matches.
           Serial.println(txMsgList[TX_MSG_NACK]);
           return(false);
         }
@@ -533,7 +533,7 @@ void txRespondError(struct COMMAND_MSG rxMsg)
   strcat(txStr, "ERROR");
   Serial.println(txStr);
 }
-  
+
 void txRespond(struct COMMAND_MSG rxMsg)
 {
   char txStr[MAX_LINE_CHARS];
@@ -549,35 +549,35 @@ void txRespond(struct COMMAND_MSG rxMsg)
   {
     switch(rxMsg.command)
     {
-      // These commands have special handlings per state, 
+      // These commands have special handlings per state,
       // so the state handler manages the response.
       case RX_MSG_DEFAULTS:
       case RX_MSG_G:
       case RX_MSG_M:
       case RX_MSG_S:
         break;
-        
+
       case RX_MSG_GETLEN:
         strcat(txStr, ":");
         ltoa(raceLengthTicks, txStrPayload, 10);
         strcat(txStr, txStrPayload);
         break;
-        
+
       case RX_MSG_HW:
         strcat(txStr, ":");
         strcat(txStr, str_hw_version);
         break;
-        
+
       case RX_MSG_P:
         strcat(txStr, ":");
         strcat(txStr, str_comm_protocol);
         break;
-        
+
       case RX_MSG_V:
         strcat(txStr, ":");
         strcat(txStr, str_fw_version);
         break;
-        
+
       default:
         Serial.println("FAAAART!\r\n");
         break;
@@ -620,7 +620,7 @@ void switchToState(int newState)
       SetAllGoLedsRed();
       currentState = STATE_IDLE;
       break;
-      
+
     case STATE_COUNTDOWN:
       // Initializations before beginning countdown state
       SetAllGoLedsRed();
@@ -635,7 +635,7 @@ void switchToState(int newState)
       falseStartFlags = 0;
       currentState = STATE_COUNTDOWN;
       break;
-      
+
     case STATE_RACING:
       // Initializations before beginning racing state
       raceStartMillis = millis();
@@ -645,7 +645,7 @@ void switchToState(int newState)
       SetAllGoLedsGreen();
       currentState = STATE_RACING;
       break;
-      
+
     default:
       break;
   }
@@ -830,7 +830,7 @@ void doStateRacing()
   char txStr0[100];
   char txStr1[10];
 
-  // @@@ TODO: Watch for race timer to expire 
+  // @@@ TODO: Watch for race timer to expire
     // kill race when time expires
     // Report final distance for each racer
 
@@ -1025,7 +1025,7 @@ void defaultsInit()
 
 void setup()
 {
-  Serial.begin(115200); 
+  Serial.begin(115200);
   pinMode(PIN_STATUS_LED, OUTPUT);
   digitalWrite(PIN_STATUS_LED, HIGH);
   for(int i=0; i < NUM_SENSORS; i++)

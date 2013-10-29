@@ -21,14 +21,14 @@ If the command message is malformed, the reply message is:
 #### Heartbeat command
 A *heartbeat command* acts as a request for alive-status confirmation from the RaceMonitor. The format is:
     !a:NNN
-where the key `NNN` is a non-negative integer less than or equal to 65535. The PC app is free to select keys randomly or sequentially. The width of the number is not fixed to three digits.  
+where the key `NNN` is a non-negative integer less than or equal to 65535. The PC app is free to select keys randomly or sequentially. The width of the number is not fixed to three digits.
 
 #### Heartbeat response
 ##### Reply
 The RaceMonitor replies to a *heartbeat command* with a message in following format:
     A:NNN
-where `NNN` represents the key received in the most recently received well-formed *heartbeat command*.  
-  
+where `NNN` represents the key received in the most recently received well-formed *heartbeat command*.
+
 If `NNN` is a malformed string that does not contain only numeral characters representing a value in the appropriate range, the reply message is as follows:
     NACK
 
@@ -40,14 +40,14 @@ The RaceMonitor does not change state or take any further actions besides sendin
     !a:12345
 The reply to the *heartbeat command* example above is:
     A:12345
-  
+
 **Example 2**
     !a:12A45
 The reply to the *heartbeat command* example above is:
     NACK
 
 #### Heartbeat state-wise response matrix
-The received key in these example responses is `12345`.  
+The received key in these example responses is `12345`.
 
 <table>
 <tr><th>RaceMonitor state</th>  <th>Reply from RaceMonitor</th>  <th>Action triggered</th></tr>
@@ -66,12 +66,12 @@ where the key `NNN` is a non-negative integer less than or equal to 255, represe
 ##### Reply
 The RaceMonitor replies to a well-formed *set countdown seconds command* with a message in following format:
     C:NNN
-where `NNN` represents the key value received.  
-  
+where `NNN` represents the key value received.
+
 If the received key is invalid, the reply message is
     C:NACK
 and no other action is taken.
-  
+
 If the *set countdown seconds command* is received while in countdown or racing state, the reply message is
     C:ERROR
 and no other action is taken.
@@ -94,12 +94,12 @@ where the key `NNN` is a non-negative integer less than or equal to 65535, repre
 ##### Reply
 The RaceMonitor replies to a well-formed *set race ticks command* with a message in following format:
     L:NNN
-where `NNN` represents the key value received.  
-  
+where `NNN` represents the key value received.
+
 If the received key is invalid, the reply message is
     L:NACK
 and no other action is taken.
-  
+
 If the *set race ticks command* is received while in countdown or racing state, the reply message is
     L:ERROR
 and no other action is taken.
@@ -199,29 +199,29 @@ This command is only valid during an ongoing race. In racing and countdown state
 
 ### Reinitialize settings
 Reinitialize race parameters countown, time, length, mock to the default values. See below for the default parameter values.
-  
+
 Command message:
     !defaults
 The expected response from the RaceMonitor is an immediate reply with the line
     DEFAULTS
-  
+
 This command is only valid during idle state. If this command is issued during racing or countdown states, this command will cause the response
     DEFAULTS:ERROR
 
 ### Set enabled rollers bitflags (NOT YET IMPLEMENTED)
 Command message format:
     !i:F
-where `F` is decimal integer representing a bitfield. bit 0 is sensor 0, etc.  
-  
+where `F` is decimal integer representing a bitfield. bit 0 is sensor 0, etc.
+
 The expected response from the RaceMonitor is an immediate reply with the line
     I:F
-  
+
 E.g. only sensors 0 and 3 are active: `F` = 9.
-  
+
 `F` must be 8 bits long or less -- **Verify!!!**
-  
+
 `F` is greater than 0, and `F` is less than or equal to 0xFFFFFFFF
-  
+
 ## Race progress update messages
 ### Countdown seconds remaining
 The message format is
@@ -237,8 +237,8 @@ where `X` is the number of the sensor that detected a false start. Values begin 
 ### Reaction times
 The message format is
     RT:X:TTTTT
-where `X` is the number of the sensor of the racer whose reaction time is being reported. Sensor values begin with zero. `TTTTT` is the number of milliseconds transpired from the start of the race until racer `X` completed started pedaling.  
-  
+where `X` is the number of the sensor of the racer whose reaction time is being reported. Sensor values begin with zero. `TTTTT` is the number of milliseconds transpired from the start of the race until racer `X` completed started pedaling.
+
 E.g. If the first racer on the first bike had a 14 ms reaction time, the message would be:
     RT:0:14
 
@@ -254,8 +254,8 @@ where `A`, `B`, `C`, and `D` are the number of ticks seen by the first, second, 
 ### Finish times
 The message format is
     Xf:TTTTT
-where `X` is the number of the sensor of the racer who finished. Values begin with zero. `TTTTT` is the number of milliseconds transpired from the start of the race until racer `X` completed the race.  
-  
+where `X` is the number of the sensor of the racer who finished. Values begin with zero. `TTTTT` is the number of milliseconds transpired from the start of the race until racer `X` completed the race.
+
 E.g. if the first racer on the first bike finishes, the message will be:
     0F:14058
 
